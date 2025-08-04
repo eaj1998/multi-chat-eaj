@@ -1,0 +1,4 @@
+# Ignores any folder named node_modules and any file named .env
+# This is the standard practice for most projects.
+node_modules/
+.env
