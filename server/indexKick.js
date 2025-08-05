@@ -68,7 +68,6 @@ app.get('/auth/callback', async (req, res) => {
     const code_verifier = req.session.code_verifier;
 
     try {
-        // *** THIS IS THE UPDATED PART ***
         // We are now sending the data as 'application/x-www-form-urlencoded'
         const params = new URLSearchParams();
         params.append('grant_type', 'authorization_code');
@@ -81,10 +80,10 @@ app.get('/auth/callback', async (req, res) => {
         const tokenResponse = await axios.post('https://api.kick.com/public/v1/oauth/token', params, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Referer': REDIRECT_URI // Added Referer header
             }
         });
-        // *** END OF UPDATED PART ***
 
         req.session.access_token = tokenResponse.data.access_token;
         req.session.refresh_token = tokenResponse.data.refresh_token;
