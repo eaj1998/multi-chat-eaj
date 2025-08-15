@@ -45,14 +45,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`🔴 Cliente desconectado: ${socket.id}`);
 
-    // Limpa WebSocket do Kick
     const kickWS = kickConnections.get(socket.id);
     if (kickWS && (kickWS.readyState === WebSocket.OPEN || kickWS.readyState === WebSocket.CONNECTING)) {
       kickWS.close();
     }
     kickConnections.delete(socket.id);
 
-    // Limpa cliente TMI da Twitch
     const twitchClient = twitchConnections.get(socket.id);
     if (twitchClient) {
       twitchClient.disconnect();
@@ -61,7 +59,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// 🎥 Função para conectar ao chat da Kick
 async function connectKickChat(socket, channel, retryAttempt = 0) {
   console.log(`[Kick] Conectando ao canal "${channel}"`);
   try {
@@ -123,7 +120,6 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
   }
 }
 
-// 📺 Conectar à Twitch
 async function connectTwitchChat(socket, channel) {
   const client = new tmi.Client({
     options: { debug: false },
