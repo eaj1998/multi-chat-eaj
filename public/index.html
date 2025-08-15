@@ -3,115 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kick Chat Viewer</title>
+    <title>Login with Kick</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        h1 { text-align: center; color: #05f383; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        #channelInput { flex-grow: 1; padding: 10px; border: 1px solid #333; background: #2c2c2c; color: #e0e0e0; border-radius: 4px; font-size: 16px; }
-        #connectBtn { padding: 10px 20px; background-color: #05f383; color: #121212; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; transition: background-color 0.3s; }
-        #connectBtn:hover { background-color: #04d973; }
-        #chat-box { height: 60vh; overflow-y: auto; border: 1px solid #333; padding: 15px; border-radius: 4px; background: #242424; margin-bottom: 10px; }
-        .message { margin-bottom: 10px; padding: 8px; border-radius: 4px; background: #2c2c2c; animation: fadeIn 0.5s ease; }
-        .message .username { font-weight: bold; }
-        .message .content { margin-left: 5px; word-wrap: break-word; }
-        .info { color: #aaa; font-style: italic; text-align: center; }
-        .error { color: #ff6b6b; font-weight: bold; text-align: center; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #121212; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .login-button { padding: 15px 30px; font-size: 18px; font-weight: bold; color: #121212; background-color: #05f383; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; transition: background-color 0.3s, transform 0.2s; }
+        .login-button:hover { background-color: #04d973; transform: translateY(-2px); }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <h1>Kick Chat Viewer</h1>
-        <div class="input-group">
-            <input type="text" id="channelInput" placeholder="Enter Kick channel name (e.g., xqc)">
-            <button id="connectBtn">Connect</button>
-        </div>
-        <div id="chat-box">
-             <div class="info">Enter a channel name and click Connect to start.</div>
-        </div>
-    </div>
-
-    <script>
-        const channelInput = document.getElementById('channelInput');
-        const connectBtn = document.getElementById('connectBtn');
-        const chatBox = document.getElementById('chat-box');
-        let eventSource;
-
-        connectBtn.addEventListener('click', () => {
-            const channelName = channelInput.value.trim();
-            if (!channelName) {
-                alert('Please enter a channel name.');
-                return;
-            }
-
-            // Clear the chatbox and show connecting message
-            chatBox.innerHTML = `<div class="info">Connecting to ${channelName}'s chat...</div>`;
-
-            // Close any existing connection
-            if (eventSource) {
-                eventSource.close();
-            }
-
-            // Create a new EventSource to connect to our server
-            eventSource = new EventSource(`/chat/${channelName}`);
-
-            eventSource.onopen = () => {
-                console.log('Connection to server opened.');
-            };
-
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (chatBox.querySelector('.info')) {
-                    chatBox.innerHTML = ''; // Clear "Connecting..." message
-                }
-
-                if (data.type === 'message') {
-                    displayMessage(data);
-                } else if (data.type === 'info' || data.type === 'error') {
-                    displaySystemMessage(data.message, data.type);
-                }
-            };
-
-            eventSource.onerror = (err) => {
-                console.error('EventSource failed:', err);
-                displaySystemMessage('Connection to server lost. Please try again.', 'error');
-                eventSource.close();
-            };
-        });
-
-        function displayMessage(msg) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message');
-            
-            const usernameSpan = document.createElement('span');
-            usernameSpan.classList.add('username');
-            usernameSpan.textContent = msg.sender.username;
-            // You can add logic here to colorize usernames based on identity
-            usernameSpan.style.color = msg.sender.identity.color || '#ffffff';
-
-            const contentSpan = document.createElement('span');
-            contentSpan.classList.add('content');
-            contentSpan.innerHTML = `: ${msg.content}`; // Use innerHTML to render emotes if they are <img> tags
-
-            messageElement.appendChild(usernameSpan);
-            messageElement.appendChild(contentSpan);
-            
-            chatBox.appendChild(messageElement);
-            // Auto-scroll to the bottom
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function displaySystemMessage(text, type) {
-            const systemMessage = document.createElement('div');
-            systemMessage.classList.add(type); // 'info' or 'error'
-            systemMessage.textContent = text;
-            chatBox.appendChild(systemMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-    </script>
+    <!-- This link points to our new backend route that will start the login process -->
+    <a href="/auth/login" class="login-button">Login with Kick</a>
 </body>
 </html>

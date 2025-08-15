@@ -1,147 +1,214 @@
-// server.js
-require('dotenv').config(); // Load environment variables from .env file
+const { KickAuthClient } = require('kick-auth');
 const express = require('express');
-const http = require('http');
-const axios = require('axios');
-const WebSocket = require('ws');
-const path = require('path');
 const session = require('express-session');
-const crypto = require('crypto');
+const path = require('path');
+const WebSocket = require('ws');
 
-// --- CONFIGURATION ---
-const KICK_CLIENT_ID = process.env.KICK_CLIENT_ID;
-const KICK_CLIENT_SECRET = process.env.KICK_CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
-const KICK_SCOPES = process.env.KICK_SCOPES || 'user:read chat:read';
-const SESSION_SECRET = process.env.SESSION_SECRET;
-const PORT = process.env.PORT || 3000;
+require('dotenv').config();
+
+let chatSocket = null;
 
 const app = express();
-const server = http.createServer(app);
-
-// --- MIDDLEWARE ---
-app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// --- HELPER FUNCTIONS for PKCE ---
-function base64URLEncode(str) {
-    return str.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-function sha256(buffer) {
-    return crypto.createHash('sha256').update(buffer).digest();
-}
+const PORT = process.env.PORT || 3000;
 
-// --- AUTHENTICATION ROUTES ---
-
-// 1. Login Route
-app.get('/auth/login', (req, res) => {
-    if (!KICK_CLIENT_ID || !KICK_CLIENT_SECRET || !REDIRECT_URI || !SESSION_SECRET) {
-        return res.status(500).send('<h1>Configuration Error</h1><p>Server is missing required environment variables.</p>');
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
-    const state = base64URLEncode(crypto.randomBytes(16));
-    const code_verifier = base64URLEncode(crypto.randomBytes(32));
-    req.session.state = state;
-    req.session.code_verifier = code_verifier;
-    const code_challenge = base64URLEncode(sha256(Buffer.from(code_verifier)));
-    const authUrl = new URL('https://api.kick.com/public/v1/oauth/authorize');
-    authUrl.searchParams.append('client_id', KICK_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('scope', KICK_SCOPES);
-    authUrl.searchParams.append('state', state);
-    authUrl.searchParams.append('code_challenge', code_challenge);
-    authUrl.searchParams.append('code_challenge_method', 'S256');
-    res.redirect(authUrl.toString());
+}));
+
+const kickAuth = new KickAuthClient({
+    clientId: process.env.KICK_CLIENT_ID,
+    clientSecret: process.env.KICK_CLIENT_SECRET,
+    redirectUri: process.env.KICK_REDIRECT_URI,
+    scopes: ['user:read', 'channel:read']
 });
 
-// 2. Callback Route
-app.get('/auth/callback', async (req, res) => {
-    const { code, state } = req.query;
-    if (!state || state !== req.session.state) {
-        return res.status(400).send('Invalid state parameter. Aborting for security.');
+const tokenNeedsRefresh = () => {
+    return true;
+}
+
+async function refreshTokenMiddleware(req, res, next) {
+    try {
+        if (!req.session.refreshToken) {
+            return res.redirect('/auth/login');
+        }
+
+        if (tokenNeedsRefresh()) {
+            const tokens = await kickAuth.refreshToken(req.session.refreshToken);
+
+            req.session.accessToken = tokens.access_token;
+            req.session.refreshToken = tokens.refresh_token;
+        }
+
+        next();
+    } catch (error) {
+        req.session.destroy(() => {
+            res.redirect('/auth/login');
+        });
     }
-    const code_verifier = req.session.code_verifier;
+}
+// Login route
+app.get('/auth/login', async (req, res) => {
+    try {
+        const { url, state, codeVerifier } = await kickAuth.getAuthorizationUrl();
+
+        req.session.state = state;
+        req.session.codeVerifier = codeVerifier;
+
+        res.redirect(url);
+    } catch (error) {
+        res.status(500).send('Failed to initialize auth flow');
+    }
+});
+
+app.get('/auth/callback', async (req, res) => {
+    try {
+        const { code, state } = req.query;
+
+        if (state !== req.session.state) {
+            return res.status(400).send('Invalid state parameter');
+        }
+
+        const tokens = await kickAuth.getAccessToken(
+            code,
+            req.session.codeVerifier
+        );
+
+        req.session.accessToken = tokens.access_token;
+        req.session.refreshToken = tokens.refresh_token;
+
+        res.redirect('/chat');
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Authentication failed');
+    }
+});
+
+app.get('/auth/logout', async (req, res) => {
+    try {
+        if (req.session.accessToken) {
+            await kickAuth.revokeToken(req.session.accessToken);
+        }
+
+        req.session.destroy(() => {
+            res.redirect('/');
+        });
+    } catch (error) {
+        res.status(500).send('Logout failed');
+    }
+});
+
+app.get('/chat', async (req, res) => {
+    console.log('Sesssion TOKEN', req.session.accessToken);
+
+    if (!req.session.accessToken) {
+        return res.redirect('/auth/login');
+    }
 
     try {
-        // We are now sending the data as 'application/x-www-form-urlencoded'
-        const params = new URLSearchParams();
-        params.append('grant_type', 'authorization_code');
-        params.append('code', code);
-        params.append('client_id', KICK_CLIENT_ID);
-        params.append('client_secret', KICK_CLIENT_SECRET);
-        params.append('redirect_uri', REDIRECT_URI);
-        params.append('code_verifier', code_verifier);
-
-        const tokenResponse = await axios.post('https://api.kick.com/public/v1/oauth/token', params, {
+        console.log('--- /chat route handler initiated ---');
+        console.log("TOKEN", req.session.accessToken)
+        const userResponse = await fetch('https://kick.com/api/v1/users/coringa', {
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
-                'Referer': REDIRECT_URI // Added Referer header
+                'Authorization': `Bearer ${req.session.accessToken}`,
+                'Accept': 'application/json'
             }
         });
 
-        req.session.access_token = tokenResponse.data.access_token;
-        req.session.refresh_token = tokenResponse.data.refresh_token;
-        req.session.expires_in = tokenResponse.data.expires_in;
-        res.send(`<h1>Login Successful!</h1><p>You can now make authenticated API requests.</p><pre>${JSON.stringify(tokenResponse.data, null, 2)}</pre>`);
+        if (!userResponse.ok) throw new Error(`Step 1 Failed. Status: ${userResponse.status}`);
+
+        const userData = await userResponse.json();
+
+        const userSlug = userData.username;
+
+        const chatroomResponse = await fetch(`https://kick.com/api/v2/channels/coringa/chatroom`);
+        
+        if (!chatroomResponse.ok) throw new Error(`Step 2 Failed. Status: ${chatroomResponse.status}`);
+        const chatroomData = await chatroomResponse.json();
+        console.log('RoomDATA', chatroomData)
+        const channelId = chatroomData.id;
+        const chatAuthToken = chatroomData.token;
+
+        connectToKickChat(channelId, chatAuthToken);
+
+        res.send(`<h1>Connection process initiated for ${userSlug}.</h1><p>The bot is now running in the background. Check your Node.js console.</p>`);
 
     } catch (error) {
-        // This log is very important for debugging on Render
-        console.error('Error exchanging token:', error.response ? error.response.data : error.message);
-        res.status(500).send('Failed to get access token from Kick. Check the server logs on Render for more details.');
+        console.error('Error in /chat route:', error);
+        res.status(500).send('Failed to get credentials to connect to chat. See console for details.');
     }
 });
 
-// --- ANONYMOUS CHAT VIEWER ROUTE (from before) ---
-app.get('/chat/:channelName', async (req, res) => {
-    // This code remains the same as before...
-    const channelName = req.params.channelName;
-    console.log(`[Server] Client connected for channel: ${channelName}`);
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-    let chatroomId;
-    let ws;
-    try {
-        const browserHeaders = { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Accept-Language': 'en-US' };
-        const response = await axios.get(`https://kick.com/api/v2/channels/${channelName}`, { headers: browserHeaders });
-        chatroomId = response.data.chatroom.id;
-        console.log(`[Server] Found chatroom ID for ${channelName}: ${chatroomId}`);
-    } catch (error) {
-        const status = error.response ? error.response.status : 'N/A';
-        console.error(`[Server] Error fetching channel ID for ${channelName}: Status ${status}`);
-        res.write(`data: ${JSON.stringify({ type: 'error', message: `Channel not found or API error (Status: ${status}).` })}\n\n`);
-        res.end();
-        return;
+function connectToKickChat(channelId, authToken) {
+    if (chatSocket) {
+        console.log('Closing existing WebSocket connection...');
+        chatSocket.close();
     }
-    ws = new WebSocket('wss://ws-us-1.pusher.com/app/E63515B324E26A17E68C?protocol=7&client=js&version=7.6.0&flash=false');
+
+    console.log(`Attempting to connect to WebSocket for channel ID: ${channelId}...`);
+    const ws = new WebSocket('wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false');
+
+    console.log('chatroom_', channelId);
+
     ws.on('open', () => {
-        console.log(`[WebSocket] Connection opened for chatroom ${chatroomId}`);
-        ws.send(JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel: `chatroom.${chatroomId}` } }));
+        console.log('WebSocket connection established! Subscribing to channel...');
+        ws.send(JSON.stringify({
+            event: 'pusher:subscribe',
+            data: {
+                // channel: `chatroom_${channelId}`,
+                channel: `chatrooms.${channelId}.v2`,
+                auth: ''
+            }
+        }));
     });
+
     ws.on('message', (data) => {
-        const message = JSON.parse(data.toString());
-        if (message.event === 'App\\Events\\ChatMessageEvent') {
-            const chatData = JSON.parse(message.data);
-            const simplifiedMessage = { type: 'message', sender: { username: chatData.sender.username, identity: chatData.sender.identity }, content: chatData.content, timestamp: chatData.created_at };
-            res.write(`data: ${JSON.stringify(simplifiedMessage)}\n\n`);
-        } else if (message.event === 'pusher:subscription_succeeded') {
-            console.log(`[WebSocket] Successfully subscribed to channel: ${message.channel}`);
-            res.write(`data: ${JSON.stringify({ type: 'info', message: 'Successfully connected to chat.' })}\n\n`);
+        try {
+            const message = JSON.parse(data.toString());
+
+            if (message.event === 'pusher:ping') {
+                ws.send(JSON.stringify({ event: 'pusher:pong' }));
+                return;
+            }
+
+            if (message.event === 'pusher:subscription_succeeded') {
+                console.log(`Successfully subscribed to channel ${message.channel}!`);
+                return;
+            }
+
+            if (message.event === 'App\\Events\\ChatMessageEvent') {
+                const chatData = JSON.parse(message.data);
+
+                console.log(`[${chatData.sender.username}]: ${chatData.content}`);
+            }
+        } catch (e) {
+            console.error('Failed to parse incoming WebSocket message:', e);
         }
     });
-    ws.on('close', () => { console.log('[WebSocket] Connection closed.'); res.end(); });
-    ws.on('error', (error) => { console.error('[WebSocket] Error:', error); res.write(`data: ${JSON.stringify({ type: 'error', message: 'WebSocket connection error.' })}\n\n`); res.end(); });
-    req.on('close', () => { console.log(`[Server] Client disconnected from channel: ${channelName}`); if (ws) { ws.close(); } });
-});
 
-// --- START THE SERVER ---
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    ws.on('close', (code, reason) => {
+        const reasonString = reason ? reason.toString() : 'No reason given';
+        console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reasonString}`);
+        chatSocket = null; // Clear the socket variable
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket Error:', error);
+    });
+
+    // Store the new connection globally
+    chatSocket = ws;
+}
+
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });
