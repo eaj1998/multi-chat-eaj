@@ -40,7 +40,7 @@ O projeto é dividido em duas partes principais:
 
 1. **Clone o repositório**
    ```bash
-   git clone <url-do-repositorio>
+   git clone git@github.com:eaj1998/multi-chat-eaj.git
    cd multi-chat-eaj
    ```
 
