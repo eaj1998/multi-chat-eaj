@@ -32,7 +32,6 @@ watch(() => props.messages, async () => {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  overflow: hidden;
 }
 
 .chat-messages::-webkit-scrollbar {

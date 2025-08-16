@@ -117,11 +117,6 @@ async function disconnectSocket() {
 </script>
 
 <style scoped>
-
-#app {
-  height: 100%;
-}
-
 .app-wrapper {
   height: 100vh;
   display: flex;
@@ -134,27 +129,20 @@ async function disconnectSocket() {
 
 .chat-container {
   flex: 1;
-  /* limite opcional */
   display: flex;
   flex-direction: column;
   padding: 16px;
   box-sizing: border-box;
   background-color: #18181b;
   border-radius: 8px;
-  min-width: 300px;
+  
+  width: 100%;
+  max-width: 900px;
+  min-width: 280px;
+  height: 100%;
+  max-height: 90vh;
   overflow: hidden;
-  width: 700px;
-  height: 90vh;
-  background-color: #18181b;
-  border-radius: 8px;
 
-}
-
-/* Responsivo para telas pequenas */
-@media (max-width: 768px) {
-  .split-layout {
-    flex-direction: column;
-  }
 }
 
 .inputs {
@@ -182,6 +170,13 @@ async function disconnectSocket() {
   cursor: pointer;
 }
 
+.inputs input,
+.inputs button {
+  line-height: 1.2;
+  flex: 1 1 auto;
+  width: auto;
+}
+
 .inputs button:hover {
   background-color: #555;
 }
@@ -201,5 +196,39 @@ async function disconnectSocket() {
   display: flex;
   flex-direction: column;
   margin-bottom: 10px;
+}
+
+
+@media (max-width: 768px) {
+  .chat-container {
+    padding: 12px;
+    height: auto;
+  }
+
+  .inputs {
+    flex-direction: column;
+  }
+
+
+  .inputs button {
+    width: 100%;
+  }
+
+  .inputs input {
+    width: auto;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-container {
+    border-radius: 0;
+    height: 100vh;
+    padding: 8px;
+  }
+
+  .warning-text {
+    font-size: 11px;
+  }
 }
 </style>
