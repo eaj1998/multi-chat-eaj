@@ -31,6 +31,8 @@ import { ref } from 'vue';
 import { io } from 'socket.io-client';
 import { onBeforeUnmount } from 'vue';
 
+const apiUrl = import.meta.env.VITE_SOCKET_URL;
+
 onBeforeUnmount(() => {
   disconnectSocket();
 });
@@ -53,7 +55,7 @@ async function connectSocket() {
 
   isConnecting.value = true;
 
-  socket.value = io('http://localhost:3000', {
+  socket.value = io(apiUrl, {
     transports: ['websocket']
   });
 
@@ -91,7 +93,7 @@ async function connectSocket() {
 
 async function disconnectSocket() {
   try {
-    await fetch(`http://localhost:3000/disconnect-self?id=${socket.value.id}`, {
+    await fetch(`${apiUrl}/disconnect-self?id=${socket.value.id}`, {
       method: 'POST'
     });
 
