@@ -6,7 +6,7 @@
         <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="(isKickConnected || isTwitchConnected)" />
         <button class="connect-btn" @click="connectSocket" :disabled="(isKickConnected || isTwitchConnected)"
           :title="(isKickConnected || isTwitchConnected) ? 'Desconecte antes para conectar outro canal' : ''">
-          Conectar
+          {{ isConnecting ? 'Conectando' : 'Conectar' }}
         </button>
 
         <button class="connect-btn" @click="disconnectSocket"
@@ -118,11 +118,11 @@ async function disconnectSocket() {
 
 <style scoped>
 .app-wrapper {
-  height: 100vh;
+  min-height: 100dvh;
   display: flex;
-  justify-content: center;
   align-items: stretch;
-  padding: 10px;
+  justify-content: flex-start;
+  padding: 0;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -131,16 +131,17 @@ async function disconnectSocket() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 16px;
   box-sizing: border-box;
   background-color: #18181b;
-  border-radius: 8px;
-  
+
+  padding: 12px;
+  border-radius: 0;
+
   width: 100%;
-  max-width: 900px;
+  max-width: 100%;
   min-width: 280px;
-  height: 100%;
-  max-height: 90vh;
+  height: 100dhv;
+  /* max-height: 90vh; */
   overflow: hidden;
 
 }
@@ -200,15 +201,18 @@ async function disconnectSocket() {
 
 
 @media (max-width: 768px) {
+
   .chat-container {
-    padding: 12px;
-    height: auto;
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    height: 100vh;
+    padding: 8px;
   }
 
   .inputs {
     flex-direction: column;
   }
-
 
   .inputs button {
     width: 100%;
@@ -221,14 +225,37 @@ async function disconnectSocket() {
 }
 
 @media (max-width: 480px) {
-  .chat-container {
-    border-radius: 0;
-    height: 100vh;
-    padding: 8px;
+  .app-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100dvh;
+    min-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
 
-  .warning-text {
-    font-size: 11px;
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #18181b;
+    border-radius: 0;
   }
+
+  .inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
 }
 </style>
