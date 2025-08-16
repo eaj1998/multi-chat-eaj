@@ -29,27 +29,27 @@ defineProps({
 <style scoped>
 .chat-message {
   display: flex;
-  align-items: left;
+  align-items: baseline;
   gap: 6px;
   line-height: 1.5;
   font-size: 0.9rem;
   animation: fadeIn 0.3s ease-in-out;
-  word-break: break-word;
-
-
 }
 
 .platform-logo {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 .username {
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .message-text {
   color: #dadada;
+  word-break: break-word;
 }
 
 @keyframes fadeIn {

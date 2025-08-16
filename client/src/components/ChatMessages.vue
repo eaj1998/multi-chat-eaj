@@ -18,9 +18,26 @@ import ChatMessage from './ChatMessage.vue';
 const props = defineProps({ messages: Array });
 const container = ref(null);
 
-watch(() => props.messages, async () => {
+watch(() => props.messages, async (newMessages, oldMessages) => {
+  if (!oldMessages || oldMessages.length === 0) {
+    await nextTick();
+    container.value.scrollTop = container.value.scrollHeight;
+    return;
+  }
+  
+  const el = container.value;
+  if (!el) return;
+
+  const buffer = 30; 
+
+  const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + buffer;
+  
   await nextTick();
-  container.value.scrollTop = container.value.scrollHeight;
+
+  if (isScrolledToBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+
 }, { deep: true });
 </script>
 

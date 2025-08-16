@@ -6,7 +6,7 @@
         <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="(isKickConnected || isTwitchConnected)" />
         <button class="connect-btn" @click="connectSocket" :disabled="(isKickConnected || isTwitchConnected)"
           :title="(isKickConnected || isTwitchConnected) ? 'Desconecte antes para conectar outro canal' : ''">
-          {{ isConnecting ? 'Conectando' : 'Conectar' }}
+          {{ isConnecting ? 'Conectando...' : 'Conectar' }}
         </button>
 
         <button class="connect-btn" @click="disconnectSocket"
@@ -118,7 +118,7 @@ async function disconnectSocket() {
 
 <style scoped>
 .app-wrapper {
-  min-height: 100dvh;
+  min-height: 90dvh;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
@@ -139,7 +139,7 @@ async function disconnectSocket() {
   width: 100%;
   max-width: 100%;
   min-width: 280px;
-  height: 100dhv;
+  height: 90dvh;
 
 }
 

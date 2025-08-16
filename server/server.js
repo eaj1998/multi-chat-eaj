@@ -168,6 +168,73 @@ async function connectTwitchChat(socket, channel) {
   twitchConnections.set(socket.id, client);
 }
 
+
+//########### MOCK TESTS
+
+let mockInterval = null; // Variável para controlar o intervalo do mock
+
+const mockUsernames = ['Velociraptor', 'ChatterBox', 'GamerPro', 'SilentWatcher', 'StreamFan_123'];
+const mockMessages = {
+    short: ['olá!', 'gg', 'top', '😂', 'brabo'],
+    medium: [
+        'Essa jogada foi incrível!',
+        'Qual o próximo jogo que você vai jogar?',
+        'Estou gostando muito da live.'
+    ],
+    long: [
+        'Alguém mais acha que a estratégia do streamer de focar em recursos no início do jogo foi a decisão certa para garantir a vitória no final? 🤔',
+        'Lembrei de uma história engraçada ontem, estava tentando fazer uma receita nova e acabei queimando tudo. O alarme de incêndio disparou e os vizinhos quase chamaram os bombeiros. 😅'
+    ],
+    veryLong: [
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue.',
+    ]
+};
+
+const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function generateRandomMessage() {
+    const platform = Math.random() > 0.5 ? 'kick' : 'twitch';
+    const messageType = getRandomElement(['short', 'medium', 'long', 'veryLong']);
+    const messageContent = getRandomElement(mockMessages[messageType]);
+
+    return {
+        platform,
+        username: getRandomElement(mockUsernames),
+        message: messageContent,
+        color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+        timestamp: Date.now()
+    };
+}
+
+app.post('/test/start-mock', (req, res) => {
+    if (mockInterval) {
+        clearInterval(mockInterval);
+    }
+
+    const { interval = 2000 } = req.body;
+
+    console.log(`🚀 Iniciando gerador de mocks. Intervalo: ${interval}ms`);
+
+    mockInterval = setInterval(() => {
+        const mockMessage = generateRandomMessage();
+        console.log('Emitindo mock:', mockMessage.username, ':', mockMessage.message);
+        io.emit('chat-message', mockMessage);
+    }, interval);
+
+    res.json({ status: 'ok', message: `Gerador de mocks iniciado com intervalo de ${interval}ms.` });
+});
+
+app.post('/test/stop-mock', (req, res) => {
+    if (mockInterval) {
+        clearInterval(mockInterval);
+        mockInterval = null;
+        console.log('🛑 Gerador de mocks parado.');
+        return res.json({ status: 'ok', message: 'Gerador de mocks parado com sucesso.' });
+    }
+    console.log('⚠️ Tentativa de parar gerador de mocks, mas nenhum estava ativo.');
+    res.status(404).json({ error: 'Nenhum gerador de mocks ativo para parar.' });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor Híbrido rodando em http://localhost:${PORT}`);
