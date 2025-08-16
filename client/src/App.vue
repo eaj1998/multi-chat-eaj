@@ -124,7 +124,6 @@ async function disconnectSocket() {
   justify-content: flex-start;
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .chat-container {
@@ -141,8 +140,6 @@ async function disconnectSocket() {
   max-width: 100%;
   min-width: 280px;
   height: 100dhv;
-  /* max-height: 90vh; */
-  overflow: hidden;
 
 }
 

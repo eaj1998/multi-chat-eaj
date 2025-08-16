@@ -35,9 +35,7 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
-  /* min-width: 320px; */
   min-height: 100vh;
-  overflow: hidden;
 }
 
 h1 {
@@ -98,5 +96,11 @@ button:focus-visible {
     padding: 0;
     height: 100%;
     width: 100%;
+  }
+}
+
+@media (min-width: 760px) {
+  body {
+    overflow: hidden;
   }
 }
