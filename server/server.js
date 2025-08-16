@@ -26,6 +26,7 @@ for (const varName of requiredEnvVars) {
 app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
 app.use(express.json());
 
+// Mapeamentos das conexões
 const kickConnections = new Map(); 
 const twitchConnections = new Map();
 
@@ -44,20 +45,41 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`🔴 Cliente desconectado: ${socket.id}`);
-
-    const kickWS = kickConnections.get(socket.id);
-    if (kickWS && (kickWS.readyState === WebSocket.OPEN || kickWS.readyState === WebSocket.CONNECTING)) {
-      kickWS.close();
-    }
-    kickConnections.delete(socket.id);
-
-    const twitchClient = twitchConnections.get(socket.id);
-    if (twitchClient) {
-      twitchClient.disconnect();
-    }
-    twitchConnections.delete(socket.id);
+    closeConnections(socket.id);
   });
 });
+
+app.post('/disconnect-self', (req, res) => {
+  const clientId = req.query.id;
+  console.log(`⚡ Requisição de desconexão recebida para cliente: ${clientId}`);
+
+  if (!clientId) {
+    return res.status(400).json({ error: 'ID do cliente não informado' });
+  }
+
+  closeConnections(clientId);
+
+  const socket = io.sockets.sockets.get(clientId);
+  if (socket) {
+    socket.disconnect(true);
+  }
+
+  res.json({ status: 'ok', message: `Conexões do cliente ${clientId} encerradas` });
+});
+
+function closeConnections(clientId) {
+  const kickWS = kickConnections.get(clientId);
+  if (kickWS && (kickWS.readyState === WebSocket.OPEN || kickWS.readyState === WebSocket.CONNECTING)) {
+    kickWS.close();
+  }
+  kickConnections.delete(clientId);
+
+  const twitchClient = twitchConnections.get(clientId);
+  if (twitchClient) {
+    twitchClient.disconnect();
+  }
+  twitchConnections.delete(clientId);
+}
 
 async function connectKickChat(socket, channel, retryAttempt = 0) {
   console.log(`[Kick] Conectando ao canal "${channel}"`);
@@ -92,6 +114,7 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
             platform: 'kick',
             username: chatData.sender.username,
             message: chatData.content,
+            color: chatData.sender.identity.color,
             timestamp: Date.now()
           });
         }
@@ -135,6 +158,7 @@ async function connectTwitchChat(socket, channel) {
     io.emit('chat-message', {
       platform: 'twitch',
       username: tags['display-name'],
+      color: tags['color'],
       message,
       timestamp: Date.now()
     });
@@ -147,6 +171,4 @@ async function connectTwitchChat(socket, channel) {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor Híbrido rodando em http://localhost:${PORT}`);
-  console.log('-> API de autenticação Kick disponível em /api/auth/*');
-  console.log('-> Agregador de chat emitindo eventos "chat-message" via Socket.IO');
 });

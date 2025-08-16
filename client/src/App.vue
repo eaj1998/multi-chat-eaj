@@ -1,21 +1,24 @@
 <template>
   <div class="app-wrapper">
     <div class="chat-container">
-      <h1>Multi CHAT by EAJ</h1>
-
       <div class="inputs">
-        <input v-model="kickChannel" placeholder="Canal Kick" :disabled="isConnecting" />
-        <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="isConnecting" />
-
-        <button @click="connectSocket" :disabled="isConnecting || (isKickConnected || isTwitchConnected)">
-          {{ isConnecting ? 'Conectando...' : 'Conectar' }}
+        <input v-model="kickChannel" placeholder="Canal Kick" :disabled="(isKickConnected || isTwitchConnected)" />
+        <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="(isKickConnected || isTwitchConnected)" />
+        <button class="connect-btn" @click="connectSocket" :disabled="(isKickConnected || isTwitchConnected)"
+          :title="(isKickConnected || isTwitchConnected) ? 'Desconecte antes para conectar outro canal' : ''">
+          Conectar
         </button>
 
-        <button @click="disconnectSocket" :disabled="isConnecting || (!isKickConnected && !isTwitchConnected)">
+        <button class="connect-btn" @click="disconnectSocket"
+          :disabled="isConnecting || (!isKickConnected && !isTwitchConnected)">
           Desconectar
         </button>
       </div>
-
+      <div class="warning-wrapper">
+        <small v-if="isKickConnected || isTwitchConnected" class="warning-text">
+          ⚠ Para alterar o canal, desconecte primeiro
+        </small>
+      </div>
       <ChatStream title="EAJOTA" :kickConnected="isKickConnected" :twitchConnected="isTwitchConnected"
         :kickUsername="connectedKickChannel" :twitchUsername="connectedTwitchChannel" />
     </div>
@@ -26,6 +29,11 @@
 import ChatStream from './components/ChatStream.vue';
 import { ref } from 'vue';
 import { io } from 'socket.io-client';
+import { onBeforeUnmount } from 'vue';
+
+onBeforeUnmount(() => {
+  disconnectSocket();
+});
 
 const kickChannel = ref('');
 const twitchChannel = ref('');
@@ -35,10 +43,13 @@ const isKickConnected = ref(false);
 const isTwitchConnected = ref(false);
 const connectedKickChannel = ref('');
 const connectedTwitchChannel = ref('');
-const isConnecting = ref(false); 
+const isConnecting = ref(false);
 
 async function connectSocket() {
-  if (socket.value && socket.value.connected) return;
+  if (socket.value) {
+    socket.value.disconnect();
+    socket.value = null;
+  }
 
   isConnecting.value = true;
 
@@ -73,42 +84,75 @@ async function connectSocket() {
     isConnecting.value = false;
   });
 
-  socket.value.off('chat-message');
   socket.value.on('chat-message', (msg) => {
     window.dispatchEvent(new CustomEvent('chat-message', { detail: msg }));
   });
 }
 
-function disconnectSocket() {
-  if (socket.value) {
-    socket.value.disconnect();
-    socket.value = null;
+async function disconnectSocket() {
+  try {
+    await fetch(`http://localhost:3000/disconnect-self?id=${socket.value.id}`, {
+      method: 'POST'
+    });
+
+    if (socket.value) {
+      socket.value.disconnect();
+      socket.value = null;
+    }
     isKickConnected.value = false;
     isTwitchConnected.value = false;
     connectedKickChannel.value = '';
     connectedTwitchChannel.value = '';
+    kickChannel.value = '';
+    twitchChannel.value = '';
+
+  } catch (err) {
+    console.error('Erro ao desconectar todas as conexões:', err);
   }
 }
+
+
 </script>
 
-
 <style scoped>
+
+#app {
+  height: 100%;
+}
+
 .app-wrapper {
   height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .chat-container {
-  width: 700px;
-  height: 90vh;
+  flex: 1;
+  /* limite opcional */
   display: flex;
   flex-direction: column;
   padding: 16px;
   box-sizing: border-box;
   background-color: #18181b;
   border-radius: 8px;
+  min-width: 300px;
+  overflow: hidden;
+  width: 700px;
+  height: 90vh;
+  background-color: #18181b;
+  border-radius: 8px;
+
+}
+
+/* Responsivo para telas pequenas */
+@media (max-width: 768px) {
+  .split-layout {
+    flex-direction: column;
+  }
 }
 
 .inputs {
@@ -138,5 +182,22 @@ function disconnectSocket() {
 
 .inputs button:hover {
   background-color: #555;
+}
+
+.connect-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.warning-text {
+  color: #ffcc00;
+  font-size: 12px;
+}
+
+.warning-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
 }
 </style>

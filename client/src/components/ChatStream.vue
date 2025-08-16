@@ -27,23 +27,17 @@ defineProps({
 const messages = ref([]);
 
 function addMessage(msg) {
+  console.log(msg.platform)
   messages.value.push({
-    user: `[${msg.platform.toUpperCase()}] ${msg.username}`,
+    user: `${msg.username}`,
     text: msg.message,
-    color: getColorForPlatform(msg.platform),
+    color: msg.color,
+    platform: msg.platform
   });
 
   if (messages.value.length > 100) {
     messages.value.splice(0, messages.value.length - 100);
   }
-}
-
-function getColorForPlatform(platform) {
-  return {
-    twitch: '#9147ff',
-    youtube: '#ff0000',
-    kick: '#43e660',
-  }[platform] || '#dadada';
 }
 
 let onChatMessage = (event) => {

@@ -37,10 +37,8 @@ onMounted(async () => {
     const tokens = await res.json();
     console.log('Tokens recebidos:', tokens);
 
-    // Salva o access_token para uso futuro
     localStorage.setItem('kick_access_token', tokens.access_token);
 
-    // Redireciona para a página principal
     router.push('/');
   } catch (err) {
     console.error('Erro ao obter o token:', err);
