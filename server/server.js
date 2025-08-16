@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173'],
+    origin: [process.env.CORS_ORIGIN],
     methods: ['GET', 'POST']
   }
 });
@@ -23,7 +23,7 @@ for (const varName of requiredEnvVars) {
   }
 }
 
-app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
+app.use(cors({ origin: [process.env.CORS_ORIGIN], credentials: true }));
 app.use(express.json());
 
 // Mapeamentos das conexões
