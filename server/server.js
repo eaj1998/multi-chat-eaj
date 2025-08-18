@@ -173,9 +173,9 @@ async function connectTwitchChat(socket, channel) {
 
 let mockInterval = null; // Variável para controlar o intervalo do mock
 
-const mockUsernames = ['Velociraptor', 'ChatterBox', 'GamerPro', 'SilentWatcher', 'StreamFan_123'];
+const mockUsernames = ['lucasmahle', 'mikeColorado', 'GamerPro', 'SilentWatcher', 'StreamFan_123'];
 const mockMessages = {
-  short: ['olá!', 'gg', 'top', '😂', 'brabo'],
+  short: ['olá!', 'gg', 'top', '😂', 'brabo', 'kid maaaixxxx'],
   medium: [
     'Essa jogada foi incrível!',
     'Qual o próximo jogo que você vai jogar?',

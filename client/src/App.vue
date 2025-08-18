@@ -136,7 +136,7 @@ async function disconnectSocket() {
   padding: 12px;
   border-radius: 0;
 
-  width: 100%;
+  width: 850px;
   max-width: 100%;
   min-width: 280px;
   height: 90dvh;
@@ -148,6 +148,7 @@ async function disconnectSocket() {
   gap: 8px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+  font-size: 16px;
 }
 
 .inputs input {

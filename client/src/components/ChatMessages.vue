@@ -21,24 +21,33 @@ const container = ref(null);
 watch(() => props.messages, async (newMessages, oldMessages) => {
   if (!oldMessages || oldMessages.length === 0) {
     await nextTick();
-    container.value.scrollTop = container.value.scrollHeight;
+    setTimeout(() => {
+      container.value?.scrollTo({
+        top: container.value.scrollHeight,
+        behavior: "smooth"
+      });
+    }, 50);
     return;
   }
-  
+
   const el = container.value;
   if (!el) return;
 
-  const buffer = 30; 
-
+  const buffer = 30;
   const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + buffer;
-  
+
   await nextTick();
 
   if (isScrolledToBottom) {
-    el.scrollTop = el.scrollHeight;
+    setTimeout(() => {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: "smooth"
+      });
+    }, 50);
   }
-
 }, { deep: true });
+
 </script>
 
 <style scoped>
@@ -49,6 +58,8 @@ watch(() => props.messages, async (newMessages, oldMessages) => {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
+
+  -webkit-overflow-scrolling: touch;
 }
 
 .chat-messages::-webkit-scrollbar {
