@@ -48,13 +48,14 @@ const messageText = computed(() => {
   font-size: 0.85rem;
   border-left: 4px solid;
   animation: fadeIn 0.3s ease-in-out;
+  color: #f0f0f0;
 }
 .platform-twitch {
   background-color: #3a2f4d;
   border-left-color: #a970ff;
 }
 .platform-kick {
-  background-color: #2f4d38;
+  background-color: #164024; 
   border-left-color: #53fc18;
 }
 @keyframes fadeIn {

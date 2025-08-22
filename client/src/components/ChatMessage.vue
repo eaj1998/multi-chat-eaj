@@ -1,6 +1,8 @@
 <template>
   <div class="chat-message" :class="{ 'self-message': isSelf }">
-    <img v-if="platform === 'twitch'" src="../assets/twitch-icon.svg" class="platform-logo" />
+    <img v-if="platform === 'twitch' && isDarkMode" src="../assets/twitch-icon.svg" class="platform-logo" />
+    <img v-else-if="platform === 'twitch' && !isDarkMode" src="../assets/twitch-icon-white.svg" class="platform-logo" />
+
     <img v-else-if="platform === 'kick'" src="../assets/kick-icon.svg" class="platform-logo" />
 
     <span class="username" :style="{ color: color }">{{ user }}:</span>
@@ -14,7 +16,8 @@ defineProps({
   text: String,
   color: String,
   platform: String,
-  isSelf: Boolean
+  isSelf: Boolean,
+  isDarkMode: Boolean
 });
 
 const emoteProviders = {
@@ -72,7 +75,7 @@ function renderMessage(message, platform) {
 }
 
 .message-text {
-  color: #dadada;
+  color: var(--text-color-secondary);
   word-break: break-word;
 }
 

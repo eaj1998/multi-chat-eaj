@@ -9,6 +9,7 @@
           :color="item.data.color"
           :platform="item.data.platform"
           :isSelf="false"
+          :isDarkMode="isDarkMode" 
         />
         <AlertMessage v-else-if="item.type === 'alert'" :alert="item.data" />
       </div>
@@ -24,7 +25,7 @@ import { watch, ref, nextTick } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 import AlertMessage from './AlertMessage.vue';
 
-const props = defineProps({ messages: Array });
+const props = defineProps({ messages: Array , isDarkMode: Boolean});
 const container = ref(null);
 console.log(props.messages);
 
@@ -81,11 +82,7 @@ watch(() => props.messages, async (newMessages, oldMessages) => {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #46464a;
+  /* background: #46464a; */
   border-radius: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5e;
 }
 </style>

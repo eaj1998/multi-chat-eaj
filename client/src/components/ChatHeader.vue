@@ -24,8 +24,6 @@ defineProps({
 .chat-header {
   padding: 12px 16px;
   font-weight: 700;
-  background-color: #1f1f23;
-  border-bottom: 1px solid #36363a;
   text-align: center;
   font-size: 0.9rem;
   letter-spacing: 1px;
@@ -38,7 +36,6 @@ defineProps({
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.7rem;
-  color: white;
 }
 
 .twitch {

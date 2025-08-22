@@ -164,7 +164,7 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
           case 'App\\Events\\GiftedSubscriptionsEvent':
             socket.emit('alert-message', {
               platform: 'kick',
-              type: 'giftsub',
+              type: 'subgift',
               username: eventData.gifter_username,
               count: eventData.gifted_usernames.length,
               message: `presenteou ${eventData.gifted_usernames.length} subs!`,
@@ -347,7 +347,7 @@ function generateRandomMessage() {
 
 function generateRandomAlert() {
   const platform = Math.random() > 0.5 ? 'kick' : 'twitch';
-  const alertTypes = ['sub', 'resub', 'giftsub_community', 'giftsub'];
+  const alertTypes = ['sub', 'resub', 'subgift'];
   const type = getRandomElement(alertTypes);
   const username = getRandomElement(mockUsernames);
 
@@ -362,7 +362,7 @@ function generateRandomAlert() {
     alertData.tier = 'Tier 1';
     alertData.months = type === 'resub' ? Math.floor(Math.random() * 10) + 2 : 1;
     alertData.message = `${username} se inscreveu por ${alertData.months} meses!`;
-  } else if (type === 'giftsub_community') {
+  } else if (type === 'subgift' || type === 'giftsub') {
     alertData.count = getRandomElement([1, 5, 10]);
     alertData.tier = 'Tier 1';
     alertData.message = `${username} presenteou ${alertData.count} subs!`;

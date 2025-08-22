@@ -1,18 +1,12 @@
 <template>
   <div class="chat-stream">
-    <ChatHeader
-      :title="title"
-      :kickConnected="kickConnected"
-      :twitchConnected="twitchConnected"
-      :kickUsername="kickUsername"
-      :twitchUsername="twitchUsername"
-    />
-    <ChatMessages :messages="messages" />
+    <ChatHeader :title="title" :kickConnected="kickConnected" :twitchConnected="twitchConnected"
+      :kickUsername="kickUsername" :twitchUsername="twitchUsername" />
+    <ChatMessages :messages="messages" :isDarkMode="isDarkMode" />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
 import ChatHeader from './ChatHeader.vue';
 import ChatMessages from './ChatMessages.vue';
 
@@ -22,7 +16,8 @@ defineProps({
   kickConnected: Boolean,
   twitchConnected: Boolean,
   kickUsername: String,
-  twitchUsername: String
+  twitchUsername: String,
+  isDarkMode: Boolean,
 });
 
 // const messages = ref([]);
@@ -60,8 +55,8 @@ defineProps({
   display: flex;
   flex-direction: column;
   border-radius: 8px;
-  background-color: #1e1e1e;
   overflow: hidden;
-  border: 1px solid #36363a;
+  background-color: var(--bg-color-secondary);
+  border: 1px solid var(--border-color);
 }
 </style>
