@@ -19,7 +19,7 @@
           ⚠ Para alterar o canal, desconecte primeiro
         </small>
       </div>
-      <ChatStream title="EAJOTA" :kickConnected="isKickConnected" :twitchConnected="isTwitchConnected"
+      <ChatStream title="" :messages="messages" :kickConnected="isKickConnected" :twitchConnected="isTwitchConnected"
         :kickUsername="connectedKickChannel" :twitchUsername="connectedTwitchChannel" />
     </div>
   </div>
@@ -37,22 +37,24 @@ onBeforeUnmount(() => {
   disconnectSocket();
 });
 
+const messages = ref([]);
 const kickChannel = ref('');
 const twitchChannel = ref('');
 const socket = ref(null);
-
 const isKickConnected = ref(false);
 const isTwitchConnected = ref(false);
 const connectedKickChannel = ref('');
 const connectedTwitchChannel = ref('');
 const isConnecting = ref(false);
 
+// Em App.vue
+
 async function connectSocket() {
   if (socket.value) {
     socket.value.disconnect();
     socket.value = null;
   }
-
+  messages.value = [];
   isConnecting.value = true;
 
   socket.value = io(apiUrl, {
@@ -61,19 +63,16 @@ async function connectSocket() {
 
   socket.value.on('connect', () => {
     console.log('✅ Conectado ao servidor');
-
     if (kickChannel.value) {
       socket.value.emit('join-kick', { username: kickChannel.value });
       isKickConnected.value = true;
       connectedKickChannel.value = kickChannel.value;
     }
-
     if (twitchChannel.value) {
       socket.value.emit('join-twitch', { username: twitchChannel.value });
       isTwitchConnected.value = true;
       connectedTwitchChannel.value = twitchChannel.value;
     }
-
     isConnecting.value = false;
   });
 
@@ -87,32 +86,48 @@ async function connectSocket() {
   });
 
   socket.value.on('chat-message', (msg) => {
-    window.dispatchEvent(new CustomEvent('chat-message', { detail: msg }));
+    messages.value.push({
+      id: msg.timestamp + msg.username,
+      type: 'chat',
+      data: msg,
+    });
+  });
+
+  socket.value.on('alert-message', (msg) => {
+    messages.value.push({
+      id: msg.timestamp + (msg.username || 'alert'),
+      type: 'alert',
+      data: msg,
+    });
   });
 }
 
 async function disconnectSocket() {
   try {
-    await fetch(`${apiUrl}/disconnect-self?id=${socket.value.id}`, {
-      method: 'POST'
-    });
+    if (socket.value && socket.value.id) {
+      await fetch(`${apiUrl}/disconnect-self?id=${socket.value.id}`, {
+        method: 'POST'
+      });
+    }
 
     if (socket.value) {
+      socket.value.off('chat-message');
+      socket.value.off('alert-message');
       socket.value.disconnect();
       socket.value = null;
     }
+
+    messages.value = [];
     isKickConnected.value = false;
     isTwitchConnected.value = false;
     connectedKickChannel.value = '';
     connectedTwitchChannel.value = '';
     kickChannel.value = '';
     twitchChannel.value = '';
-
   } catch (err) {
-    console.error('Erro ao desconectar todas as conexões:', err);
+    console.error('Erro ao desconectar:', err);
   }
 }
-
 
 </script>
 

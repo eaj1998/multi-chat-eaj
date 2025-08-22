@@ -1,8 +1,17 @@
 <template>
   <div class="chat-messages" ref="container">
     <template v-if="messages.length > 0">
-      <ChatMessage v-for="(msg, i) in messages" :key="i" :user="msg.user" :text="msg.text" :color="msg.color"
-        :platform="msg.platform" :isSelf="false" />
+      <div v-for="item in messages" :key="item.id">
+        <ChatMessage
+          v-if="item.type === 'chat'"
+          :user="item.data.username"
+          :text="item.data.message"
+          :color="item.data.color"
+          :platform="item.data.platform"
+          :isSelf="false"
+        />
+        <AlertMessage v-else-if="item.type === 'alert'" :alert="item.data" />
+      </div>
     </template>
     <template v-else>
       <div class="text-center text-gray-500 mt-10">Nenhuma mensagem ainda.</div>
@@ -10,13 +19,14 @@
   </div>
 </template>
 
-
 <script setup>
 import { watch, ref, nextTick } from 'vue';
 import ChatMessage from './ChatMessage.vue';
+import AlertMessage from './AlertMessage.vue';
 
 const props = defineProps({ messages: Array });
 const container = ref(null);
+console.log(props.messages);
 
 watch(() => props.messages, async (newMessages, oldMessages) => {
   if (!oldMessages || oldMessages.length === 0) {

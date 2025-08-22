@@ -17,6 +17,7 @@ import ChatHeader from './ChatHeader.vue';
 import ChatMessages from './ChatMessages.vue';
 
 defineProps({
+  messages: Array,
   title: String,
   kickConnected: Boolean,
   twitchConnected: Boolean,
@@ -24,33 +25,32 @@ defineProps({
   twitchUsername: String
 });
 
-const messages = ref([]);
+// const messages = ref([]);
 
-function addMessage(msg) {
-  console.log(msg.platform)
-  messages.value.push({
-    user: `${msg.username}`,
-    text: msg.message,
-    color: msg.color,
-    platform: msg.platform
-  });
+// function addMessage(msg) {
+//   messages.value.push({
+//     user: `${msg.username}`,
+//     text: msg.message,
+//     color: msg.color,
+//     platform: msg.platform
+//   });
 
-  if (messages.value.length > 100) {
-    messages.value.splice(0, messages.value.length - 100);
-  }
-}
+//   if (messages.value.length > 100) {
+//     messages.value.splice(0, messages.value.length - 100);
+//   }
+// }
 
-let onChatMessage = (event) => {
-  addMessage(event.detail);
-};
+// let onChatMessage = (event) => {
+//   addMessage(event.detail);
+// };
 
-onMounted(() => {
-  window.addEventListener('chat-message', onChatMessage);
-});
+// onMounted(() => {
+//   window.addEventListener('chat-message', onChatMessage);
+// });
 
-onBeforeUnmount(() => {
-  window.removeEventListener('chat-message', onChatMessage);
-});
+// onBeforeUnmount(() => {
+//   window.removeEventListener('chat-message', onChatMessage);
+// });
 
 </script>
 

@@ -1,10 +1,19 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const tmi = require('tmi.js');
-const WebSocket = require('ws');
-require('dotenv').config();
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import tmi from 'tmi.js';
+import WebSocket from 'ws';
+import twitchEmoticons from "@mkody/twitch-emoticons";
+const { EmoteFetcher, EmoteParser } = twitchEmoticons;
+
+import 'dotenv/config';
+const fetcher = new EmoteFetcher(process.env.TWITCH_ID, process.env.TWITCH_SECRET);
+const parser = new EmoteParser(fetcher, {
+  template: '<img class="emote" alt="{name}" src="{link}">',
+  size: '2x',
+  match: /(\w+)+?/g
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +24,7 @@ const io = new Server(server, {
   }
 });
 
-const requiredEnvVars = ['TWITCH_USERNAME', 'TWITCH_OAUTH_TOKEN'];
+const requiredEnvVars = ['TWITCH_USERNAME', 'TWITCH_OAUTH_TOKEN', 'TWITCH_SECRET', 'TWITCH_ID'];
 for (const varName of requiredEnvVars) {
   if (!process.env[varName]) {
     console.error(`ERRO: A variável ${varName} é obrigatória`);
@@ -26,7 +35,26 @@ for (const varName of requiredEnvVars) {
 app.use(cors({ origin: [process.env.CORS_ORIGIN], credentials: true }));
 app.use(express.json());
 
-// Mapeamentos das conexões
+async function loadEmotes(channelId) {
+  try {
+    console.log(`📡 Fetching emotes for channel ID: ${channelId}...`);
+    await Promise.all([
+      fetcher.fetchTwitchEmotes(), // Global Twitch Emotes
+      fetcher.fetchTwitchEmotes(channelId),
+      fetcher.fetchBTTVEmotes(), // Global BTTV Emotes
+      fetcher.fetchBTTVEmotes(channelId),
+      fetcher.fetchFFZEmotes(), // Global FFZ Emotes
+      fetcher.fetchFFZEmotes(channelId),
+      fetcher.fetchSevenTVEmotes(null, 'avif'), // Global 7TV Emotes
+      fetcher.fetchSevenTVEmotes(channelId, 'avif'),
+    ]);
+    console.log(`✅ Successfully fetched emotes for channel ID: ${channelId}`);
+  } catch (error) {
+    console.error(`❌ CRITICAL: Failed to fetch emotes for channel ID ${channelId}.`);
+    console.error(`Error details: ${error}`);
+  }
+}
+
 const kickConnections = new Map();
 const twitchConnections = new Map();
 
@@ -106,18 +134,45 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
 
         if (msg.event === 'pusher:ping') {
           ws.send(JSON.stringify({ event: 'pusher:pong' }));
+          return;
         }
 
-        if (msg.event === 'App\\Events\\ChatMessageEvent') {
-          const chatData = JSON.parse(msg.data);
-          socket.emit('chat-message', {
-            platform: 'kick',
-            username: chatData.sender.username,
-            message: chatData.content,
-            color: chatData.sender.identity.color,
-            timestamp: Date.now()
-          });
+        const eventData = msg.data ? JSON.parse(msg.data) : {};
+
+        switch (msg.event) {
+          case 'App\\Events\\ChatMessageEvent':
+            socket.emit('chat-message', {
+              platform: 'kick',
+              username: eventData.sender.username,
+              message: eventData.content,
+              color: eventData.sender.identity.color,
+              timestamp: Date.now()
+            });
+            break;
+
+          case 'App\\Events\\SubscriptionEvent':
+            socket.emit('alert-message', {
+              platform: 'kick',
+              type: 'sub',
+              username: eventData.username,
+              months: eventData.months,
+              message: `assinou por ${eventData.months} meses!`,
+              timestamp: Date.now()
+            });
+            break;
+
+          case 'App\\Events\\GiftedSubscriptionsEvent':
+            socket.emit('alert-message', {
+              platform: 'kick',
+              type: 'giftsub',
+              username: eventData.gifter_username,
+              count: eventData.gifted_usernames.length,
+              message: `presenteou ${eventData.gifted_usernames.length} subs!`,
+              timestamp: Date.now()
+            });
+            break;
         }
+
       } catch (err) {
         console.error('[Kick] Erro ao processar mensagem:', err.message);
       }
@@ -144,6 +199,8 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
 }
 
 async function connectTwitchChat(socket, channel) {
+  let emotesLoaded = false;
+
   const client = new tmi.Client({
     options: { debug: false },
     identity: {
@@ -153,72 +210,192 @@ async function connectTwitchChat(socket, channel) {
     channels: [channel]
   });
 
-  client.on('message', (chan, tags, message, self) => {
+  client.on('subscription', (chan, username, methods, message, userstate) => {
+    const tier = methods.plan === 'Prime' ? 'Prime' : `Tier ${methods.plan / 1000}`;
+    console.log(`[tmi.js] Nova Inscrição: ${username} (${tier})`);
+
+    socket.emit('alert-message', {
+      platform: 'twitch',
+      type: 'sub',
+      username: username,
+      tier: tier,
+      message: message || `${username} acabou de se inscrever!`,
+      timestamp: Date.now()
+    });
+  });
+
+  client.on('resubscription', (chan, username, months, message, userstate, methods) => {
+    const tier = methods.plan === 'Prime' ? 'Prime' : `Tier ${methods.plan / 1000}`;
+    console.log(`[tmi.js] Re-inscrição: ${username} por ${months} meses (${tier})`);
+
+    socket.emit('alert-message', {
+      platform: 'twitch',
+      type: 'resub',
+      username: username,
+      months: months,
+      tier: tier,
+      message: message || `${username} se inscreveu por ${months} meses!`,
+      timestamp: Date.now()
+    });
+  });
+
+  client.on('subgift', (channel, username, streakMonths, recipient, methods, userstate) => {
+    const tier = methods.plan === 'Prime' ? 'Prime' : `Tier ${methods.plan / 1000}`;
+    console.log(`[tmi.js] Presente Individual: ${username} presenteou um sub para ${recipient}`);
+
+    socket.emit('alert-message', {
+      platform: 'twitch',
+      type: 'giftsub_single',
+      username: username,
+      recipient: recipient,
+      tier: tier,
+      message: `${username} presenteou uma inscrição para ${recipient}!`,
+      timestamp: Date.now()
+    });
+  });
+
+  client.on('message', async (chan, tags, message, self) => {
     if (self) return;
+
+    if (!emotesLoaded) {
+      const channelId = tags['room-id'];
+      console.log(`Carregando emotes para o canal ID: ${channelId}`);
+      await loadEmotes(channelId);
+      emotesLoaded = true;
+    }
+
+    const parsedMessage = manualParse(message, fetcher);
+
+    console.log('parsed', parsedMessage);
+
     socket.emit('chat-message', {
       platform: 'twitch',
       username: tags['display-name'],
       color: tags['color'],
-      message,
+      message: parsedMessage,
       timestamp: Date.now()
     });
   });
 
   await client.connect();
   twitchConnections.set(socket.id, client);
+
+}
+
+function manualParse(message, fetcherInstance, options = {}) {
+  const { size = '2x' } = options;
+
+  const words = message.split(' ');
+
+  const parsedWords = words.map(word => {
+    if (fetcherInstance.emotes.has(word)) {
+      const emote = fetcherInstance.emotes.get(word);
+
+      const link = emote.toLink(size);
+      console.log('words', words)
+      console.log('emote', emote);
+      console.log('sizes', emote.sizes);
+
+      return `<img alt="${emote.code}" title="${emote.code}" class="emote" src="${link.replace('undefined', '1x.avif')}">`;
+    }
+
+    return word;
+  });
+
+  return parsedWords.join(' ');
 }
 
 
 //########### MOCK TESTS
-
-let mockInterval = null; // Variável para controlar o intervalo do mock
+let mockInterval = null;
 
 const mockUsernames = ['lucasmahle', 'mikeColorado', 'GamerPro', 'SilentWatcher', 'StreamFan_123'];
-const mockMessages = {
-  short: ['olá!', 'gg', 'top', '😂', 'brabo', 'kid maaaixxxx'],
-  medium: [
-    'Essa jogada foi incrível!',
-    'Qual o próximo jogo que você vai jogar?',
-    'Estou gostando muito da live.'
-  ],
-  long: [
-    'Alguém mais acha que a estratégia do streamer de focar em recursos no início do jogo foi a decisão certa para garantir a vitória no final? 🤔',
-    'Lembrei de uma história engraçada ontem, estava tentando fazer uma receita nova e acabei queimando tudo. O alarme de incêndio disparou e os vizinhos quase chamaram os bombeiros. 😅'
-  ],
-  veryLong: [
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue.',
-  ]
-};
+const mockMessages = [
+  'olá!',
+  'gg',
+  'top',
+  '😂',
+  'brabo',
+  'isso foi incrível!',
+  'Kappa',
+  'Vamos lá! Pog',
+  'Não acredito nisso LUL',
+  'Que triste peppoSAD',
+  'Alguém mais viu isso? 7TV',
+  'Este jogo é muito bom Pog'
+];
 
-const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function generateRandomMessage() {
   const platform = Math.random() > 0.5 ? 'kick' : 'twitch';
-  const messageType = getRandomElement(['short', 'medium', 'long', 'veryLong']);
-  const messageContent = getRandomElement(mockMessages[messageType]);
+  const messageContent = getRandomElement(mockMessages);
+  const parsedContent = manualParse(messageContent, fetcher);
 
   return {
-    platform,
-    username: getRandomElement(mockUsernames),
-    message: messageContent,
-    color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
-    timestamp: Date.now()
+    id: Date.now() + mockUsernames[0],
+    type: 'chat',
+    data: {
+      platform,
+      username: getRandomElement(mockUsernames),
+      message: parsedContent, 
+      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+      timestamp: Date.now()
+    }
   };
 }
+
+
+function generateRandomAlert() {
+  const platform = Math.random() > 0.5 ? 'kick' : 'twitch';
+  const alertTypes = ['sub', 'resub', 'giftsub_community', 'giftsub'];
+  const type = getRandomElement(alertTypes);
+  const username = getRandomElement(mockUsernames);
+
+  let alertData = {
+    platform,
+    type,
+    username,
+    timestamp: Date.now(),
+  };
+
+  if (type === 'sub' || type === 'resub') {
+    alertData.tier = 'Tier 1';
+    alertData.months = type === 'resub' ? Math.floor(Math.random() * 10) + 2 : 1;
+    alertData.message = `${username} se inscreveu por ${alertData.months} meses!`;
+  } else if (type === 'giftsub_community') {
+    alertData.count = getRandomElement([1, 5, 10]);
+    alertData.tier = 'Tier 1';
+    alertData.message = `${username} presenteou ${alertData.count} subs!`;
+  }
+
+  return {
+    id: Date.now() + username,
+    type: 'alert',
+    data: alertData
+  };
+}
+
+const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 app.post('/test/start-mock', (req, res) => {
   if (mockInterval) {
     clearInterval(mockInterval);
   }
-
   const { interval = 2000 } = req.body;
-
   console.log(`🚀 Iniciando gerador de mocks. Intervalo: ${interval}ms`);
 
   mockInterval = setInterval(() => {
-    const mockMessage = generateRandomMessage();
-    console.log('Emitindo mock:', mockMessage.username, ':', mockMessage.message);
-    io.emit('chat-message', mockMessage);
+    const isChatMessage = Math.random() < 0.8;
+
+    if (isChatMessage) {
+      const mockMsg = generateRandomMessage();
+      console.log('Emitindo MOCK de CHAT:', mockMsg.data.username, ':', mockMsg.data.message);
+      io.emit('chat-message', mockMsg.data);
+    } else {
+      const mockAlert = generateRandomAlert();
+      console.log('Emitindo MOCK de ALERTA:', mockAlert.data.type, 'por', mockAlert.data.username);
+      io.emit('alert-message', mockAlert.data);
+    }
   }, interval);
 
   res.json({ status: 'ok', message: `Gerador de mocks iniciado com intervalo de ${interval}ms.` });

@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "Node.js server to aggregate chat from Twitch, YouTube and Kick",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "dev": "nodemon server/server.js"
   },
   "dependencies": {
+    "@mkody/twitch-emoticons": "^2.9.3",
     "axios": "^1.11.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
