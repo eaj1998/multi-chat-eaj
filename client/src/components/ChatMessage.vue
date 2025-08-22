@@ -79,11 +79,6 @@ function renderMessage(message, platform) {
   word-break: break-word;
 }
 
-.emote {
-  height: 28px;
-  vertical-align: middle;
-  display: inline-block;
-}
 
 @keyframes fadeIn {
   from {
@@ -95,5 +90,14 @@ function renderMessage(message, platform) {
     opacity: 1;
     transform: translateY(0);
   }
+}
+</style>
+
+<style>
+.emote {
+  height: 28px;
+  width: auto;
+  vertical-align: middle;
+  display: inline-block;
 }
 </style>
