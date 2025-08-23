@@ -1,18 +1,16 @@
 <template>
   <div class="chat-header">
-    <span v-if="twitchConnected" class="tag twitch">
-      Twitch: {{ twitchUsername }}
-    </span>
-
-    <span v-if="kickConnected" class="tag kick">
+    <span class="tag kick">
       Kick: {{ kickUsername }}
+    </span>
+    <span class="tag twitch">
+      Twitch: {{ twitchUsername }}
     </span>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  title: String,
   kickConnected: Boolean,
   twitchConnected: Boolean,
   kickUsername: String,
@@ -22,7 +20,7 @@ defineProps({
 
 <style scoped>
 .chat-header {
-  padding: 12px 16px;
+  padding: 0px 0px;
   font-weight: 700;
   text-align: center;
   font-size: 0.9rem;
