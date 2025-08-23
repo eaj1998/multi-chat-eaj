@@ -380,39 +380,6 @@ input:checked+.slider:after {
   }
 }
 
-@media (max-width: 480px) {
-  .app-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    min-height: 100dvh;
-    min-width: 100%;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  .chat-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    background-color: #FFF;
-    border-radius: 0;
-  }
-
-  .inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-}
 </style>
 
 <style>
@@ -441,10 +408,12 @@ input:checked+.slider:after {
 .app-wrapper {
   background-color: var(--bg-color-primary);
   color: var(--text-color-primary);
+  height: 100%;
 }
 
 .chat-container {
   background-color: var(--bg-color-primary);
+  height: 100%;
 }
 
 .inputs input {
