@@ -3,7 +3,8 @@
     <template v-if="props.messages.length > 0">
       <div v-for="item in props.messages" :key="item.id">
         <ChatMessage v-if="item.type === 'chat'" :user="item.data.username" :text="item.data.message"
-          :color="item.data.color" :platform="item.data.platform" :isSelf="false" :isDarkMode="props.isDarkMode" :channelBadges="props.channelBadges"  :userBadgesData="item.data.badges" />
+          :color="item.data.color" :platform="item.data.platform" :isSelf="false" :isDarkMode="props.isDarkMode"
+          :channelBadges="props.channelBadges" :userBadgesData="item.data.badges" />
         <AlertMessage v-else-if="item.type === 'alert'" :alert="item.data" />
       </div>
     </template>
@@ -14,61 +15,41 @@
 </template>
 
 <script setup>
-import { watch, ref, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 import AlertMessage from './AlertMessage.vue';
 
 const props = defineProps({ messages: Array, isDarkMode: Boolean, channelBadges: Object });
 const container = ref(null);
+let observer = null;
 
-watch(() => props.messages, async (newMessages) => {
+onMounted(() => {
   const el = container.value;
   if (!el) return;
 
-  // Passo 1: Verifica se o usuário estava perto do fundo ANTES da atualização do DOM.
-  // Usamos um buffer maior para garantir que mesmo durante uma animação de 'smooth' de outra fonte, ele ainda funcione.
-  const buffer = 100; 
-  const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + buffer;
+  const scrollToBottom = () => {
+    el.scrollTop = el.scrollHeight;
+  };
 
-  // Passo 2: Espera o Vue renderizar a nova mensagem e o DOM ser atualizado.
-  await nextTick();
+  scrollToBottom();
 
-  // Passo 3: Se o usuário ESTAVA no fundo, força a rolagem para o novo final.
-  if (isScrolledToBottom || newMessages.length <= 1) { // Também força na primeira mensagem
-    el.scrollTop = el.scrollHeight; // Rolagem instantânea
+  observer = new MutationObserver((mutations) => {
+    const buffer = 100;
+    const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + buffer;
+
+    if (isScrolledToBottom) {
+      scrollToBottom();
+    }
+  });
+
+  observer.observe(el, { childList: true });
+});
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect();
   }
-}, { deep: true });
-
-// watch(() => props.messages, async (newMessages, oldMessages) => {
-//   if (!oldMessages || oldMessages.length === 0) {
-//     await nextTick();
-//     setTimeout(() => {
-//       container.value?.scrollTo({
-//         top: container.value.scrollHeight,
-//         behavior: "smooth"
-//       });
-//     }, 50);
-//     return;
-//   }
-
-//   const el = container.value;
-//   if (!el) return;
-
-//   const buffer = 30;
-//   const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + buffer;
-
-//   await nextTick();
-
-//   if (isScrolledToBottom) {
-//     setTimeout(() => {
-//       el.scrollTo({
-//         top: el.scrollHeight,
-//         behavior: "smooth"
-//       });
-//     }, 50);
-//   }
-// }, { deep: true });
-
+});
 </script>
 
 <style scoped>

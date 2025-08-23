@@ -362,7 +362,7 @@ input:checked+.slider:after {
     width: 100%;
     max-width: none;
     border-radius: 0;
-    height: 100vh;
+    height: 100dvh; 
     padding: 8px;
   }
 

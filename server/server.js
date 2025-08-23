@@ -203,6 +203,7 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
             break;
         }
 
+      
       } catch (err) {
         console.error('[Kick] Erro ao processar mensagem:', err.message);
       }
