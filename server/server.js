@@ -86,12 +86,18 @@ io.on('connection', (socket) => {
     connectKickChat(socket, username);
   });
 
-  socket.on('join-twitch', async ({ username }) => {
+socket.on('join-twitch', async ({ username }) => {
     console.log(`➡️ Cliente ${socket.id} se conectou à Twitch: ${username}`);
-
+    
     const twitchBadges = await fetchAndFormatTwitchBadges(username);
 
-    const currentState = clientBadgeState.get(socket.id);
+    let currentState = clientBadgeState.get(socket.id);
+
+    if (!currentState) {
+      console.warn(`[Estado] Estado não encontrado para ${socket.id}, inicializando...`);
+      currentState = { twitch: {}, kick: {} };
+    }
+
     currentState.twitch = twitchBadges;
     clientBadgeState.set(socket.id, currentState);
 
