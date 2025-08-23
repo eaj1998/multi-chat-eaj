@@ -22,7 +22,8 @@
       </div>
 
       <ChatStream title="" :messages="messages" :kickConnected="isKickConnected" :twitchConnected="isTwitchConnected"
-        :kickUsername="connectedKickChannel" :twitchUsername="connectedTwitchChannel" :isDarkMode="isDarkMode"/>
+        :kickUsername="connectedKickChannel" :twitchUsername="connectedTwitchChannel" :isDarkMode="isDarkMode"
+        :channelBadges="channelBadges" />
     </div>
 
     <SettingsModal :show="isModalVisible" @close="isModalVisible = false">
@@ -60,6 +61,7 @@ const isTwitchConnected = ref(false);
 const connectedKickChannel = ref('');
 const connectedTwitchChannel = ref('');
 const isConnecting = ref(false);
+const channelBadges = ref({});
 
 onBeforeUnmount(() => {
   disconnectSocket();
@@ -70,10 +72,22 @@ onMounted(() => {
   if (savedMode !== null) {
     isDarkMode.value = JSON.parse(savedMode);
   }
+
+  if (isDarkMode.value) {
+    document.body.classList.add('theme-dark');
+  } else {
+    document.body.classList.remove('theme-dark');
+  }
 });
 
 watch(isDarkMode, (newValue) => {
   localStorage.setItem('darkMode', newValue);
+
+  if (newValue) {
+    document.body.classList.add('theme-dark');
+  } else {
+    document.body.classList.remove('theme-dark');
+  }
 });
 
 async function connectSocket() {
@@ -110,6 +124,12 @@ async function connectSocket() {
     connectedKickChannel.value = '';
     connectedTwitchChannel.value = '';
     isConnecting.value = false;
+  });
+
+  socket.value.on('channel-badges', (badges) => {
+    console.log('✅ [App.vue] Badges recebidos do socket:', badges); 
+    channelBadges.value = badges;
+    console.log('✅ [App.vue] Badges recebidos do socket e atribuidos:', channelBadges); 
   });
 
   socket.value.on('chat-message', (msg) => {
@@ -382,7 +402,7 @@ input:checked+.slider:after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    background-color: #18181b;
+    background-color: #FFF;
     border-radius: 0;
   }
 
@@ -448,5 +468,9 @@ input:checked+.slider:after {
 .chat-stream {
   background-color: var(--bg-color-secondary);
   border: 1px solid var(--border-color);
+}
+
+body {
+  background-color: var(--bg-color-primary);
 }
 </style>

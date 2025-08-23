@@ -1,8 +1,8 @@
 <template>
   <div class="chat-stream">
-    <ChatHeader :title="title" :kickConnected="kickConnected" :twitchConnected="twitchConnected"
-      :kickUsername="kickUsername" :twitchUsername="twitchUsername" />
-    <ChatMessages :messages="messages" :isDarkMode="isDarkMode" />
+    <ChatHeader :title="props.title" :kickConnected="props.kickConnected" :twitchConnected="props.twitchConnected"
+      :kickUsername="props.kickUsername" :twitchUsername="props.twitchUsername" />
+    <ChatMessages :messages="props.messages" :isDarkMode="props.isDarkMode" :channelBadges="props.channelBadges"/>
   </div>
 </template>
 
@@ -10,7 +10,7 @@
 import ChatHeader from './ChatHeader.vue';
 import ChatMessages from './ChatMessages.vue';
 
-defineProps({
+const props = defineProps({
   messages: Array,
   title: String,
   kickConnected: Boolean,
@@ -18,35 +18,8 @@ defineProps({
   kickUsername: String,
   twitchUsername: String,
   isDarkMode: Boolean,
+  channelBadges: Object,
 });
-
-// const messages = ref([]);
-
-// function addMessage(msg) {
-//   messages.value.push({
-//     user: `${msg.username}`,
-//     text: msg.message,
-//     color: msg.color,
-//     platform: msg.platform
-//   });
-
-//   if (messages.value.length > 100) {
-//     messages.value.splice(0, messages.value.length - 100);
-//   }
-// }
-
-// let onChatMessage = (event) => {
-//   addMessage(event.detail);
-// };
-
-// onMounted(() => {
-//   window.addEventListener('chat-message', onChatMessage);
-// });
-
-// onBeforeUnmount(() => {
-//   window.removeEventListener('chat-message', onChatMessage);
-// });
-
 </script>
 
 <style scoped>

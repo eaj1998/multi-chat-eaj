@@ -6,14 +6,18 @@ import tmi from 'tmi.js';
 import WebSocket from 'ws';
 import twitchEmoticons from "@mkody/twitch-emoticons";
 const { EmoteFetcher, EmoteParser } = twitchEmoticons;
-
+import { ApiClient } from '@twurple/api';
+import { AppTokenAuthProvider } from '@twurple/auth';
 import 'dotenv/config';
+
 const fetcher = new EmoteFetcher(process.env.TWITCH_ID, process.env.TWITCH_SECRET);
-const parser = new EmoteParser(fetcher, {
-  template: '<img class="emote" alt="{name}" src="{link}">',
-  size: '2x',
-  match: /(\w+)+?/g
-});
+
+const authProvider = new AppTokenAuthProvider(
+  process.env.TWITCH_ID,
+  process.env.TWITCH_SECRET
+);
+const apiClient = new ApiClient({ authProvider });
+
 
 const app = express();
 const server = http.createServer(app);
@@ -57,18 +61,43 @@ async function loadEmotes(channelId) {
 
 const kickConnections = new Map();
 const twitchConnections = new Map();
+const clientBadgeState = new Map();
 
 io.on('connection', (socket) => {
   console.log(`🔌 Novo cliente conectado: ${socket.id}`);
 
   socket.on('join-kick', async ({ username }) => {
     console.log(`➡️ Cliente ${socket.id} se conectou ao Kick: ${username}`);
-    await connectKickChat(socket, username);
+
+    const kickBadges = await fetchAndFormatKickBadges(username);
+
+    let currentState = clientBadgeState.get(socket.id);
+
+    if (!currentState) {
+      console.warn(`[Estado] Estado não encontrado para ${socket.id}, inicializando...`);
+      currentState = { twitch: {}, kick: {} };
+    }
+
+    currentState.kick = kickBadges;
+    clientBadgeState.set(socket.id, currentState);
+
+    socket.emit('channel-badges', currentState);
+
+    connectKickChat(socket, username);
   });
 
   socket.on('join-twitch', async ({ username }) => {
     console.log(`➡️ Cliente ${socket.id} se conectou à Twitch: ${username}`);
-    await connectTwitchChat(socket, username);
+
+    const twitchBadges = await fetchAndFormatTwitchBadges(username);
+
+    const currentState = clientBadgeState.get(socket.id);
+    currentState.twitch = twitchBadges;
+    clientBadgeState.set(socket.id, currentState);
+
+    socket.emit('channel-badges', currentState);
+
+    connectTwitchChat(socket, username);
   });
 
   socket.on('disconnect', () => {
@@ -146,6 +175,7 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
               username: eventData.sender.username,
               message: eventData.content,
               color: eventData.sender.identity.color,
+              badges: eventData.sender.identity.badges,
               timestamp: Date.now()
             });
             break;
@@ -196,6 +226,48 @@ async function connectKickChat(socket, channel, retryAttempt = 0) {
   } catch (error) {
     console.error(`[Kick] Erro: ${error.message}`);
   }
+}
+async function getKickChannelInfo(channel) {
+  if (!channel) return null;
+
+  const url = `https://kick.com/api/v2/channels/${channel.toLowerCase()}`;
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Status da resposta: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error(`Erro ao buscar informações do canal da Kick "${channel}":`, error.message);
+    return null;
+  }
+}
+
+async function fetchAndFormatKickBadges(channelName) {
+  const channelInfo = await getKickChannelInfo(channelName);
+  console.log(channelInfo);
+
+  if (!channelInfo) {
+    return {};
+  }
+
+  const formattedBadges = {};
+
+  if (channelInfo.subscriber_badges && Array.isArray(channelInfo.subscriber_badges)) {
+    channelInfo.subscriber_badges.forEach(badge => {
+      const key = `subscriber-${badge.months}`;
+      if (badge.badge_image) {
+        formattedBadges[key] = badge.badge_image.src;
+      }
+    });
+  }
+  console.log(`[Kick] Badges formatados para o canal "${channelName}":`, formattedBadges);
+  return formattedBadges;
 }
 
 async function connectTwitchChat(socket, channel) {
@@ -266,12 +338,13 @@ async function connectTwitchChat(socket, channel) {
 
     const parsedMessage = manualParse(message, fetcher);
 
-    console.log('parsed', parsedMessage);
+    console.log('tags', tags['badges']);
 
     socket.emit('chat-message', {
       platform: 'twitch',
       username: tags['display-name'],
       color: tags['color'],
+      badges: tags['badges'],
       message: parsedMessage,
       timestamp: Date.now()
     });
@@ -282,20 +355,45 @@ async function connectTwitchChat(socket, channel) {
 
 }
 
-function manualParse(message, fetcherInstance, options = {}) {
-  const { size = '2x' } = options;
+async function fetchAndFormatTwitchBadges(channel) {
+  try {
+    const user = await apiClient.users.getUserByName(channel);
+    if (!user) {
+      console.error(`[Badges] Usuário Twitch ${channel} não encontrado.`);
+      return {};
+    }
+    const channelId = user.id;
 
+    const [globalBadges, channelBadges] = await Promise.all([
+      apiClient.chat.getGlobalBadges(),
+      apiClient.chat.getChannelBadges(channelId)
+    ]);
+
+    const badgeMap = new Map();
+    [...globalBadges, ...channelBadges].forEach(badge => {
+      badge.versions.forEach(version => {
+        const key = `${badge.id}/${version.id}`;
+        badgeMap.set(key, version.getImageUrl(2));
+      });
+    });
+
+    return Object.fromEntries(badgeMap);
+  } catch (error) {
+    console.error('[Badges] Erro ao buscar os badges da Twitch:', error);
+    return {};
+  }
+}
+
+
+function manualParse(message, fetcherInstance, options = {}) {
   const words = message.split(' ');
 
   const parsedWords = words.map(word => {
-    if (fetcherInstance.emotes.has(word)) {
-      const emote = fetcherInstance.emotes.get(word);
+    const cleanWord = word.trim().replace(/[.,!?;:]/g, '');
 
-      const link = emote.toLink(size);
-      console.log('words', words)
-      console.log('emote', emote);
-      console.log('sizes', emote.sizes);
-
+    if (fetcherInstance.emotes.has(cleanWord)) {
+      const emote = fetcherInstance.emotes.get(cleanWord);
+      const link = emote.toLink();
       return `<img alt="${emote.code}" title="${emote.code}" class="emote" src="${link.replace('undefined', '1x.avif')}">`;
     }
 
@@ -337,7 +435,7 @@ function generateRandomMessage() {
     data: {
       platform,
       username: getRandomElement(mockUsernames),
-      message: parsedContent, 
+      message: parsedContent,
       color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
       timestamp: Date.now()
     }
