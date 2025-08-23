@@ -174,7 +174,8 @@ input:checked + .slider:before {
   height: 60px;
   background-color: var(--bg-color-secondary);
   border-bottom: 1px solid var(--border-color);
-  position: relative;
+  position: relative; 
+  z-index: 10; 
   gap: 24px;
 }
 
@@ -256,6 +257,7 @@ input:checked + .slider:before {
     color: var(--text-color-primary);
     z-index: 1000;
     order: 3;
+    z-index: 1001;
   }
 
   .header-actions {
@@ -271,6 +273,7 @@ input:checked + .slider:before {
     background-color: var(--bg-color-secondary);
     border-bottom: 1px solid var(--border-color);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
   }
 
   .header-actions.is-open {
