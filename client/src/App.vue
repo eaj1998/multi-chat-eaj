@@ -45,8 +45,8 @@ body {
 
 .app-wrapper {
   display: flex;
-  flex-direction: column; /* Organiza os filhos (header e main) em uma coluna */
-  height: 100dvh; /* Ocupa a altura inteira da tela */
+  flex-direction: column; 
+  height: 100dvh;
 }
 
 .sidebar-menu {
@@ -56,9 +56,9 @@ body {
 }
 
 .main-content {
-  flex: 1; /* Faz esta área "esticar" e ocupar todo o espaço vertical restante */
-  display: flex; /* Necessário para que o filho (ChatContainer) possa ter height: 100% */
-  overflow: hidden; /* Evita que o chat cause uma barra de rolagem na página inteira */
+  flex: 1; 
+  display: flex; 
+  overflow: hidden; 
 }
 
 .menu-toggle,
