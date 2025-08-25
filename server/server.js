@@ -22,7 +22,17 @@ const apiClient = new ApiClient({ authProvider });
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = process.env.CORS_ORIGINS.split(",");
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(origin => origin.trim())
+  : [];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+
 
 app.use(
   cors({
@@ -34,7 +44,7 @@ app.use(
 
 const io = new Server(server, {
   cors: {
-    origin: [process.env.CORS_ORIGIN],
+    origin: [allowedOrigins],
     methods: ['GET', 'POST']
   }
 });
