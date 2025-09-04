@@ -1,222 +1,188 @@
 <template>
   <header class="app-header">
-    <div class="brand">
-      <ChatHeader :kickConnected="isKickConnected" :twitchConnected="isTwitchConnected" :kickUsername="kickChannel"
-        :twitchUsername="twitchChannel" />
-    </div>
-
-    <button class="mobile-nav-toggle" @click="toggleMobileMenu">
-      <span>☰</span>
+    <!-- Botão hambúrguer para mobile -->
+    <button class="menu-toggle" @click="isMobileMenuOpen = !isMobileMenuOpen"
+      :class="{ 'menu-open': isMobileMenuOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
 
-    <div class="header-actions" :class="{ 'is-open': isMobileMenuOpen }">
+    <!-- Controles de conexão - escondidos no mobile por padrão -->
+    <div class="connection-controls" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
+      <!-- Fechar menu no mobile -->
+      <button class="close-menu" @click="isMobileMenuOpen = false">
+        ✕
+      </button>
 
-      <div class="connection-controls">
-        <input v-model="kickChannel" placeholder="Canal Kick" :disabled="isKickConnected || isTwitchConnected" />
-        <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="isKickConnected || isTwitchConnected" />
-        <button class="connect-btn" @click="connectSocket" :disabled="isKickConnected || isTwitchConnected">
-          {{ isConnecting ? '...' : 'Conectar' }}
+      <div class="controls-group">
+        <input v-model="kickChannel" placeholder="Canal Kick" :disabled="isKickConnected || isTwitchConnected"
+          @keyup.enter="handleConnect" />
+        <input v-model="twitchChannel" placeholder="Canal Twitch" :disabled="isKickConnected || isTwitchConnected"
+          @keyup.enter="handleConnect" />
+        <button class="connect-btn" @click="handleConnect"
+          :disabled="isKickConnected || isTwitchConnected || isConnecting">
+          {{ isConnecting ? 'Conectando...' : 'Conectar' }}
         </button>
-        <button class="connect-btn" @click="disconnectSocket" :disabled="!isKickConnected && !isTwitchConnected">
+        <button class="connect-btn disconnect-btn" @click="handleDisconnect"
+          :disabled="!isKickConnected && !isTwitchConnected">
           Desconectar
         </button>
-        <button class="settings-btn" @click="isModalVisible = true" title="Configurações">
+        <button class="settings-btn" @click="toggleSettings" title="Configurações">
           ⚙️
         </button>
       </div>
-
-      <!-- <nav class="main-nav">
-         <ul>
-           <li><a href="#" @click="closeMobileMenu">Configurações</a></li>
-           <li><a href="#" @click="closeMobileMenu">Canais Salvos</a></li>
-           <li><a href="#" @click="closeMobileMenu">Sobre</a></li>
-         </ul>
-      </nav> -->
-
     </div>
 
-    <SettingsModal :show="isModalVisible" @close="isModalVisible = false">
-      <div class="theme-switcher">
-        <div class="theme-label">
-          <span>🌙</span>
-          <span>Tema escuro</span>
-        </div>
-        <label class="switch">
-          <input type="checkbox" v-model="isDarkMode">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </SettingsModal>
+    <div class="header-status">
+      <ConnectionStatus />
+    </div>
+
+    <div v-if="isMobileMenuOpen" class="menu-overlay" @click="isMobileMenuOpen = false"></div>
+
+    <SettingsModal v-if="isSettingsOpen" @close="isSettingsOpen = false" />
   </header>
 </template>
+
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref } from 'vue';
 import { useChatStore } from '../stores/chatStore.js';
+import { storeToRefs } from 'pinia';
+import ConnectionStatus from './ConnectionStatus.vue';
 import SettingsModal from './SettingsModal.vue';
-import ChatHeader from './ChatHeader.vue';
 
-const isDarkMode = ref(false);
-
-
-onMounted(() => {
-  const savedMode = localStorage.getItem('darkMode');
-  if (savedMode !== null) {
-    isDarkMode.value = JSON.parse(savedMode);
-  }
-  updateBodyTheme(isDarkMode.value);
-});
-
-watch(isDarkMode, (newValue) => {
-  localStorage.setItem('darkMode', newValue);
-  updateBodyTheme(newValue);
-});
-
-function updateBodyTheme(isDark) {
-  if (isDark) {
-    document.body.classList.add('theme-dark');
-  } else {
-    document.body.classList.remove('theme-dark');
-  }
-}
-
+const chatStore = useChatStore();
 const {
   kickChannel,
   twitchChannel,
-  isConnecting,
   isKickConnected,
   isTwitchConnected,
-  connectSocket,
-  disconnectSocket,
-} = useChatStore();
+  isConnecting
+} = storeToRefs(chatStore);
 
-const isModalVisible = ref(false);
-
+const { connectSocket, disconnectSocket, addNotification } = chatStore;
 
 const isMobileMenuOpen = ref(false);
+const isSettingsOpen = ref(false);
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+// Validar e conectar
+const handleConnect = () => {
+  if (!kickChannel.value && !twitchChannel.value) {
+    addNotification({
+      type: 'warning',
+      title: 'Atenção',
+      message: 'Digite pelo menos um canal para conectar',
+      duration: 3000
+    });
+    return;
+  }
+
+  connectSocket();
+  // Fechar menu no mobile após conectar
+  isMobileMenuOpen.value = false;
 };
 
-const closeMobileMenu = () => {
+// Desconectar
+const handleDisconnect = () => {
+  disconnectSocket();
+  isMobileMenuOpen.value = false;
+};
+
+// Toggle configurações
+const toggleSettings = () => {
+  isSettingsOpen.value = !isSettingsOpen.value;
   isMobileMenuOpen.value = false;
 };
 </script>
 
 <style scoped>
-.theme-switcher {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 90%;
-  padding: 12px;
-  background-color: var(--bg-color-primary);
-  border-radius: 8px;
-}
-
-.theme-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #5a5a5e;
-  border-radius: 28px;
-  transition: .4s;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  border-radius: 50%;
-  transition: .4s;
-}
-
-input:checked + .slider {
-  background-color: #9146ff;
-}
-
-input:checked + .slider:before {
-  transform: translateX(22px);
-}
-
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  height: 60px;
   background-color: var(--bg-color-secondary);
   border-bottom: 1px solid var(--border-color);
-  position: relative; 
-  z-index: 10; 
-  gap: 24px;
-}
-
-.brand {
-  flex-shrink: 0;
-}
-
-.header-actions {
+  padding: 12px 16px;
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-grow: 1;
-  gap: 24px;
+  justify-content: space-between;
+}
+
+/* Menu hambúrguer - escondido em desktop */
+.menu-toggle {
+  display: none;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 1002;
+  padding: 0;
+}
+
+.menu-toggle span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background: var(--text-color-primary);
+  margin: 5px 0;
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.menu-toggle.menu-open span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.menu-toggle.menu-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.menu-open span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
+.close-menu {
+  display: none;
 }
 
 .connection-controls {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
+  flex: 1;
+}
+
+.controls-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
 }
 
 .connection-controls input {
-  width: 150px;
   padding: 8px 12px;
-  border-radius: 6px;
   border: 1px solid var(--border-color);
-  background-color: var(--input-bg-color);
+  border-radius: 4px;
+  background: var(--input-bg-color);
   color: var(--text-color-primary);
-  font-size: 0.9rem;
+  min-width: 120px;
 }
 
 .connect-btn,
 .settings-btn {
   padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  background-color: var(--btn-bg-color);
+  background: var(--btn-bg-color);
   color: var(--text-color-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
+  transition: background 0.2s;
   white-space: nowrap;
+}
+
+.connect-btn:hover:not(:disabled),
+.settings-btn:hover {
+  background: var(--btn-hover-bg-color);
 }
 
 .connect-btn:disabled {
@@ -224,83 +190,121 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 
-.settings-btn {
-  font-size: 1.2rem;
-  line-height: 1;
+.disconnect-btn {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
 }
 
-.main-nav ul {
-  display: flex;
-  gap: 20px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.disconnect-btn:hover:not(:disabled) {
+  background: #dc2626;
 }
 
-.main-nav a {
-  color: var(--text-color-secondary);
-  text-decoration: none;
-  font-weight: 500;
+.header-status {
+  margin-left: auto;
 }
 
-.mobile-nav-toggle {
+.menu-overlay {
   display: none;
 }
 
-@media (max-width: 850px) {
-  .mobile-nav-toggle {
+/* MOBILE STYLES */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px;
+  }
+
+  /* Mostrar menu hambúrguer */
+  .menu-toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Esconder controles por padrão no mobile */
+  .connection-controls {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100vh;
+    background: var(--bg-color-secondary);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+    flex-direction: column;
+    padding: 20px;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+  }
+
+  /* Mostrar menu quando aberto */
+  .connection-controls.mobile-menu-open {
+    left: 0;
+  }
+
+  /* Botão fechar visível no mobile */
+  .close-menu {
     display: block;
-    background: none;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
     border: none;
-    font-size: 1.8rem;
+    font-size: 24px;
     cursor: pointer;
     color: var(--text-color-primary);
-    z-index: 1000;
-    order: 3;
-    z-index: 1001;
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .header-actions {
-    display: none;
-    position: absolute;
-    top: 60px;
+  .controls-group {
+    flex-direction: column;
+    margin-top: 50px;
+    width: 100%;
+  }
+
+  .connection-controls input {
+    width: 92%;
+    min-width: unset;
+  }
+
+  .connect-btn,
+  .disconnect-btn,
+  .settings-btn {
+    width: 100%;
+  }
+
+  /* Overlay quando menu está aberto */
+  .menu-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    padding: 16px;
-    background-color: var(--bg-color-secondary);
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
   }
 
-  .header-actions.is-open {
+  /* Status sempre visível no mobile */
+  .header-status {
+    flex: 1;
     display: flex;
+    justify-content: center;
   }
+}
 
+/* Ajustes para telas muito pequenas */
+@media (max-width: 380px) {
   .connection-controls {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
+    width: 90%;
   }
-
-  .connection-controls input,
-  .connection-controls button {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .main-nav {
-    border-top: 1px solid var(--border-color);
-    padding-top: 10px;
-  }
-
-  .main-nav ul {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
+  
 }
 </style>
