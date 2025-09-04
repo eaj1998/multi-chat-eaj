@@ -4,7 +4,6 @@
     <main class="main-content">
       <ChatContainer />
     </main>
-    <!-- Sistema de notificações mantido -->
     <NotificationSystem />
   </div>
 </template>

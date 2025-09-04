@@ -7,14 +7,16 @@
       </div>
 
       <div class="modal-body">
-        <!-- Tema -->
         <div class="setting-group">
           <label class="setting-label">
             <span>Tema Escuro</span>
-            <input type="checkbox" v-model="isDarkMode" @change="toggleTheme" />
+            <!-- Switch estilizado -->
+            <div class="theme-toggle" :class="{ active: isDarkMode }" @click="toggleTheme">
+              <div class="toggle-circle"></div>
+            </div>
           </label>
-        </div>      
-        <!-- Limpar chat -->
+        </div>
+
         <div class="setting-group">
           <button class="clear-chat-btn" @click="handleClearChat">
             Limpar Chat
@@ -36,32 +38,40 @@ const isDarkMode = ref(false);
 
 onMounted(() => {
   isDarkMode.value = localStorage.getItem('darkMode') === 'true';
-
   if (isDarkMode.value) {
     document.body.classList.add('theme-dark');
   }
 });
 
 const toggleTheme = () => {
+  isDarkMode.value = !isDarkMode.value;
   document.body.classList.toggle('theme-dark');
   localStorage.setItem('darkMode', isDarkMode.value);
 };
 
 const handleClearChat = () => {
-  if (confirm('Tem certeza que deseja limpar todo o chat?')) {
-    chatStore.clearMessages();
-    emit('close');
-  }
+  chatStore.addNotification(
+    'warning',
+    'Tem certeza que deseja limpar todo o chat?',
+    null,
+    1,
+    {
+      label: 'Limpar',
+      callback: () => {
+        chatStore.clearMessages();
+
+        chatStore.addNotification('success', 'Chat limpo com sucesso!', null, 4000);
+      }
+    }
+  );
 };
+
 </script>
 
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
@@ -77,6 +87,7 @@ const handleClearChat = () => {
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .modal-header {
@@ -129,19 +140,36 @@ const handleClearChat = () => {
   font-size: 0.95rem;
 }
 
-.setting-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+/* Toggle animado */
+.theme-toggle {
+  width: 46px;
+  height: 24px;
+  background: var(--border-color);
+  border-radius: 50px;
+  padding: 2px;
   cursor: pointer;
+  position: relative;
+  transition: background 0.3s ease;
 }
 
-.setting-label select {
-  padding: 6px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--input-bg-color);
-  color: var(--text-color-primary);
-  cursor: pointer;
+.theme-toggle .toggle-circle {
+  width: 20px;
+  height: 20px;
+  background: var(--text-color-primary);
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  left: 2px;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle.active {
+  background: #4ade80;
+}
+
+.theme-toggle.active .toggle-circle {
+  left: 26px;
+  background: #fff;
 }
 
 .clear-chat-btn {

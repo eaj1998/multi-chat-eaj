@@ -11,10 +11,14 @@
                     <div class="notification-title">{{ notification.title }}</div>
                     <div class="notification-message">{{ notification.message }}</div>
                 </div>
-                <button v-if="notification.action" @click.stop="notification.action.callback"
+                <!-- <button v-if="notification.action" @click.stop="notification.action.callback"
                     class="notification-action">
                     {{ notification.action.label }}
+                </button> -->
+                <button v-if="notification.action" @click.stop="handleAction(notification)" class="notification-action">
+                    {{ notification.action.label }}
                 </button>
+
             </div>
         </TransitionGroup>
     </div>
@@ -38,6 +42,13 @@ const getIcon = (type) => {
     };
     return icons[type] || icons.info;
 };
+
+const handleAction = (notification) => {
+    if (notification.action?.callback) notification.action.callback();
+    removeNotification(notification.id);
+};
+
+
 </script>
 
 <style scoped>

@@ -23,19 +23,20 @@ if (isDarkMode.value) {
   document.body.classList.add('theme-dark');
 }
 
-function addNotification(type, message, platform = null, duration = 5000) {
+function addNotification(type, message, platform = null, duration = 5000, action = null) {
   const notification = {
     id: Date.now() + Math.random(),
-    type, 
+    type,
     message,
     platform,
     timestamp: new Date(),
-    duration
+    duration,
+    action,
   };
   
   notifications.value.push(notification);
   
-  if (duration > 0) {
+  if (!action && duration > 0) {
     setTimeout(() => {
       removeNotification(notification.id);
     }, duration);
@@ -273,7 +274,7 @@ function retryConnection(platform) {
 
 function clearMessages() {
   messages.value = [];
-  addNotification('info', '🧹 Chat limpo', null, 2000);
+  // addNotification('info', '🧹 Chat limpo', null, 2000);
 }
 
 export function useChatStore() {
