@@ -1,16 +1,16 @@
 <template>
   <header class="app-header">
-    <!-- Botão hambúrguer para mobile -->
-    <button class="menu-toggle" @click="isMobileMenuOpen = !isMobileMenuOpen"
-      :class="{ 'menu-open': isMobileMenuOpen }">
+    <button class="menu-toggle" @click="() => {
+      isMobileMenuOpen = !isMobileMenuOpen;
+      console.log('menu toggle clicado', isMobileMenuOpen);
+    }" :class="{ 'menu-open': isMobileMenuOpen }">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
-    <!-- Controles de conexão - escondidos no mobile por padrão -->
+
     <div class="connection-controls" :class="{ 'mobile-menu-open': isMobileMenuOpen }">
-      <!-- Fechar menu no mobile -->
       <button class="close-menu" @click="isMobileMenuOpen = false">
         ✕
       </button>
@@ -65,7 +65,6 @@ const { connectSocket, disconnectSocket, addNotification } = chatStore;
 const isMobileMenuOpen = ref(false);
 const isSettingsOpen = ref(false);
 
-// Validar e conectar
 const handleConnect = () => {
   if (!kickChannel.value && !twitchChannel.value) {
     addNotification({
@@ -78,17 +77,14 @@ const handleConnect = () => {
   }
 
   connectSocket();
-  // Fechar menu no mobile após conectar
   isMobileMenuOpen.value = false;
 };
 
-// Desconectar
 const handleDisconnect = () => {
   disconnectSocket();
   isMobileMenuOpen.value = false;
 };
 
-// Toggle configurações
 const toggleSettings = () => {
   isSettingsOpen.value = !isSettingsOpen.value;
   isMobileMenuOpen.value = false;
@@ -106,7 +102,6 @@ const toggleSettings = () => {
   justify-content: space-between;
 }
 
-/* Menu hambúrguer - escondido em desktop */
 .menu-toggle {
   display: none;
   width: 30px;
@@ -120,14 +115,14 @@ const toggleSettings = () => {
 }
 
 .menu-toggle span {
-  display: block;
-  width: 25px;
-  height: 3px;
+  display: block !important;
+  width: 25px !important;
+  height: 3px !important;
   background: var(--text-color-primary);
-  margin: 5px 0;
-  transition: 0.3s;
-  border-radius: 2px;
+  margin: 5px 0 !important;
+  border: 1px solid var(--text-color-primary) !important;
 }
+
 
 .menu-toggle.menu-open span:nth-child(1) {
   transform: rotate(45deg) translate(5px, 5px);
@@ -208,23 +203,20 @@ const toggleSettings = () => {
   display: none;
 }
 
-/* MOBILE STYLES */
 @media (max-width: 768px) {
   .app-header {
     padding: 8px 12px;
   }
 
-  /* Mostrar menu hambúrguer */
   .menu-toggle {
-    display: flex;
+    display: flex !important;    
     flex-direction: column;
     justify-content: center;
     align-items: center;
   }
 
-  /* Esconder controles por padrão no mobile */
   .connection-controls {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: -100%;
     width: 85%;
@@ -237,14 +229,13 @@ const toggleSettings = () => {
     padding: 20px;
     transition: left 0.3s ease;
     overflow-y: auto;
+    z-index: 9999 !important;
   }
 
-  /* Mostrar menu quando aberto */
   .connection-controls.mobile-menu-open {
     left: 0;
   }
 
-  /* Botão fechar visível no mobile */
   .close-menu {
     display: block;
     position: absolute;
@@ -280,7 +271,6 @@ const toggleSettings = () => {
     width: 100%;
   }
 
-  /* Overlay quando menu está aberto */
   .menu-overlay {
     display: block;
     position: fixed;
@@ -292,7 +282,6 @@ const toggleSettings = () => {
     z-index: 1000;
   }
 
-  /* Status sempre visível no mobile */
   .header-status {
     flex: 1;
     display: flex;
@@ -300,11 +289,10 @@ const toggleSettings = () => {
   }
 }
 
-/* Ajustes para telas muito pequenas */
 @media (max-width: 380px) {
   .connection-controls {
     width: 90%;
   }
-  
+
 }
 </style>

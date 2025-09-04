@@ -7,7 +7,6 @@
 </template>
 
 <script setup>
-import ChatHeader from './ChatHeader.vue';
 import ChatMessages from './ChatMessages.vue';
 
 const props = defineProps({

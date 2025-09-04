@@ -9,7 +9,7 @@ const isKickConnected = ref(false);
 const isTwitchConnected = ref(false);
 const channelBadges = ref({});
 const socket = ref(null);
-
+const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
 const notifications = ref([]);
 const connectionStatus = ref({
   twitch: 'disconnected', // disconnected, connecting, connected, error, reconnecting
@@ -18,6 +18,10 @@ const connectionStatus = ref({
 const lastError = ref(null);
 
 const apiUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+
+if (isDarkMode.value) {
+  document.body.classList.add('theme-dark');
+}
 
 function addNotification(type, message, platform = null, duration = 5000) {
   const notification = {
@@ -274,6 +278,7 @@ function clearMessages() {
 
 export function useChatStore() {
   return {
+    isDarkMode: readonly(isDarkMode),
     messages: readonly(messages),
     channelBadges: readonly(channelBadges),
     isConnecting: readonly(isConnecting),

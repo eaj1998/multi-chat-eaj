@@ -34,6 +34,7 @@ const props = defineProps({
   channelBadges: Object,
   userBadgesData: Object,
 });
+console.log('PROPS CHAT MESSAGE:', props.isDarkMode);
 
 const userBadges = computed(() => {
   if (!props.userBadgesData || !props.channelBadges) {

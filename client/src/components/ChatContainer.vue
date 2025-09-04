@@ -7,12 +7,20 @@
 <script setup>
 import { useChatStore } from '../stores/chatStore.js';
 import ChatStream from './ChatStream.vue';
-import { ref } from 'vue';
+import { onMounted } from 'vue';
+
 
 const { messages, channelBadges, kickChannel,
-    twitchChannel, } = useChatStore();
+    twitchChannel, isDarkMode } = useChatStore();
 
-const isDarkMode = ref(false); 
+onMounted(() => {
+  if (isDarkMode) {
+    document.body.classList.add('theme-dark');
+  } else {
+    document.body.classList.remove('theme-dark');
+  }
+});
+
 </script>
 
 <style scoped>

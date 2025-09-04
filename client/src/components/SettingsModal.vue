@@ -33,15 +33,9 @@ const emit = defineEmits(['close']);
 const chatStore = useChatStore();
 
 const isDarkMode = ref(false);
-const fontSize = ref('medium');
-const soundEnabled = ref(true);
-const autoScroll = ref(true);
 
 onMounted(() => {
   isDarkMode.value = localStorage.getItem('darkMode') === 'true';
-  fontSize.value = localStorage.getItem('fontSize') || 'medium';
-  soundEnabled.value = localStorage.getItem('soundEnabled') !== 'false';
-  autoScroll.value = localStorage.getItem('autoScroll') !== 'false';
 
   if (isDarkMode.value) {
     document.body.classList.add('theme-dark');
@@ -51,22 +45,6 @@ onMounted(() => {
 const toggleTheme = () => {
   document.body.classList.toggle('theme-dark');
   localStorage.setItem('darkMode', isDarkMode.value);
-};
-
-const updateFontSize = () => {
-  document.documentElement.style.setProperty('--chat-font-size',
-    fontSize.value === 'small' ? '0.8rem' :
-      fontSize.value === 'large' ? '1rem' : '0.9rem'
-  );
-  localStorage.setItem('fontSize', fontSize.value);
-};
-
-const toggleSound = () => {
-  localStorage.setItem('soundEnabled', soundEnabled.value);
-};
-
-const toggleAutoScroll = () => {
-  localStorage.setItem('autoScroll', autoScroll.value);
 };
 
 const handleClearChat = () => {
