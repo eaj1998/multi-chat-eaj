@@ -34,7 +34,6 @@ if (!Environment.validate()) {
     process.exit(1);
 }
 
-// Verificar conectividade (não bloquear inicialização)
 Environment.checkConnectivity().then(connectivity => {
     Logger.info('🌐 Status de conectividade:', connectivity);
 });
@@ -71,7 +70,6 @@ app.use(express.json());
 const socketManager = new SocketManager(io);
 const connectionHandler = new PlatformConnectionHandler(socketManager);
 
-// Inicializar APIs com fallback
 let fetcher = null;
 let apiClient = null;
 
@@ -166,7 +164,6 @@ io.on('connection', (socket) => {
         Logger.platform('kick', `Cliente ${socket.id} conectando: ${username}`);
 
         try {
-            // Tentar buscar badges (não crítico)
             let kickBadges = {};
             try {
                 kickBadges = await fetchAndFormatKickBadges(username);
@@ -195,7 +192,6 @@ io.on('connection', (socket) => {
         closeConnections(socket.id);
     });
 
-    // Novo evento para retry manual
     socket.on('retry-connection', async ({ platform, username }) => {
         Logger.info(`Retry manual solicitado: ${platform}`, { clientId: socket.id });
 
@@ -233,7 +229,6 @@ async function connectTwitchChatRobust(socket, channel) {
         channels: [channel]
     });
 
-    // Eventos de conexão
     client.on('connected', () => {
         Logger.platform('twitch', `Conectado com sucesso ao canal: ${channel}`);
         socketManager.emitToSocket(socket.id, 'platform-connected', { platform: 'twitch', channel });
@@ -249,7 +244,6 @@ async function connectTwitchChatRobust(socket, channel) {
         socketManager.emitToSocket(socket.id, 'platform-reconnecting', { platform: 'twitch' });
     });
 
-    // Handlers de evento (mantém iguais)
     client.on('subscription', (chan, username, methods, message, userstate) => {
         const tier = methods.plan === 'Prime' ? 'Prime' : `Tier ${methods.plan / 1000}`;
         alertService.processSubscription('twitch', username, { tier, message });
@@ -277,7 +271,6 @@ async function connectTwitchChatRobust(socket, channel) {
         await chatService.processTwitchMessage(tags, message);
     });
 
-    // Tratamento de erros
     client.on('notice', (chan, msgid, message) => {
         Logger.warn('Twitch notice:', { chan, msgid, message });
     });
@@ -298,7 +291,6 @@ async function connectKickChatRobust(socket, channel, retryAttempt = 0) {
     Logger.platform('kick', `Conectando ao canal "${channel}" (tentativa ${retryAttempt + 1})`);
 
     try {
-        // Verificar se canal existe com timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -531,13 +523,11 @@ app.post('/disconnect-self', (req, res) => {
     res.json({ status: 'ok', message: `Conexões do cliente ${clientId} encerradas` });
 });
 
-// Sistema de mock robusto
 app.post('/test/start-mock', (req, res) => testController.startMock(req, res));
 app.post('/test/stop-mock', (req, res) => testController.stopMock(req, res));
 app.get('/test/status', (req, res) => testController.getMockStatus(req, res));
 app.post('/test/generate/:type/:platform', (req, res) => testController.generateSpecificEvent(req, res));
 
-// Health check
 app.get('/health', async (req, res) => {
     const health = {
         status: 'ok',
@@ -546,7 +536,7 @@ app.get('/health', async (req, res) => {
         environment: process.env.NODE_ENV || 'development',
         services: {
             twitch: !!apiClient,
-            kick: true, // Kick não tem SDK, sempre disponível se há internet
+            kick: true, 
             emotes: !!fetcher,
             mock: mockService.getStatus().isRunning
         },
@@ -560,15 +550,12 @@ app.get('/health', async (req, res) => {
     res.json(health);
 });
 
-// Tratamento global de erros não capturados
 process.on('uncaughtException', (error) => {
     Logger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
-    // Não encerrar o processo, apenas logar
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     Logger.error('Unhandled Promise Rejection:', { reason, promise });
-    // Não encerrar o processo, apenas logar
 });
 
 const PORT = process.env.PORT || 3000;
