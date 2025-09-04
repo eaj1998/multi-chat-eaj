@@ -1,16 +1,18 @@
 <template>
   <div class="app-wrapper">
     <AppHeader />
-
     <main class="main-content">
       <ChatContainer />
     </main>
+    <!-- Sistema de notificações mantido -->
+    <NotificationSystem />
   </div>
 </template>
 
 <script setup>
 import AppHeader from './components/AppHeader.vue';
 import ChatContainer from './components/ChatContainer.vue';
+import NotificationSystem from './components/NotificationSystem.vue';
 </script>
 
 <style>
@@ -40,74 +42,21 @@ body {
   background-color: var(--bg-color-primary);
   color: var(--text-color-primary);
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app-wrapper {
   display: flex;
-  flex-direction: column; 
-  height: 100dvh;
-}
-
-.sidebar-menu {
-  width: 180px;
-  flex-shrink: 0;
-  transition: transform 0.3s ease-in-out;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
 }
 
 .main-content {
-  flex: 1; 
-  display: flex; 
-  overflow: hidden; 
-}
-
-.menu-toggle,
-.overlay {
-  display: none;
-}
-
-
-@media (max-width: 768px) {
-  .app-wrapper {
-    overflow-x: hidden;
-  }
-
-  .sidebar-menu {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 1000;
-    transform: translateX(-100%);
-  }
-
-  .app-wrapper.menu-open .sidebar-menu {
-    transform: translateX(0);
-  }
-
-  .menu-toggle {
-    display: block;
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 1001;
-    background: var(--bg-color-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-size: 1.2rem;
-  }
-
-  .app-wrapper.menu-open .overlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-  }
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
 }
 </style>
